@@ -1,0 +1,61 @@
+```{r}
+library(stargazer)
+
+# 2) Build the full example data
+set.seed(2025)
+countries <- c(
+  "USA","Germany","India","Brazil","UK",
+  "Canada","Australia","France","China","Japan",
+  "South Korea","Israel","Sweden","Netherlands","Switzerland",
+  "Singapore","Spain","Italy","Mexico","South Africa"
+)
+
+df <- data.frame(
+  Country                           = countries,
+  Founded_Companies                 = sample(200:2000, 20, replace = TRUE),
+  Avg_Seed_Investor_Distance_km     = round(runif(20, 50, 500), 1),
+  Average_Number_of_Founders        = round(runif(20, 1, 5), 1),
+  Number_of_Startup_Hubs            = sample(3:25, 20, replace = TRUE),
+  Avg_Number_of_Seed_Investors      = round(runif(20, 1, 5), 2),
+  Avg_Number_of_Lead_Seed_Investors = round(runif(20, 0, 3), 2),
+  Proportion_Regional_Investors     = round(runif(20, 0.1, 0.6), 2),
+  Proportion_Worldwide_Investors    = round(runif(20, 0.2, 0.7), 2),
+  Proportion_Industry_Specific_VC   = round(runif(20, 0.15, 0.5), 2),
+  Proportion_Regional_Lead_Investors= round(runif(20, 0.1, 0.6), 2),
+  Proportion_Worldwide_Lead_Investors=round(runif(20, 0.2, 0.7), 2),
+  Proportion_Industry_Lead_Investors = round(runif(20, 0.15, 0.5), 2),
+  Proportion_Funding_Success        = round(runif(20, 0.3, 0.8), 2),
+  Proportion_Exit_Success           = round(runif(20, 0.05, 0.25), 2),
+  Average_Distance_to_Hub_km        = round(runif(20, 10, 100), 1),
+  Average_Number_of_Seed_Rounds     = round(runif(20, 1, 4), 2),
+  Average_Exits_of_Investors        = round(runif(20, 0, 2), 2),
+  Avg_Seed_Investors_Portfolio_Orgs = round(runif(20, 5, 50), 1)
+)
+model1 <- lm(`Proportion_Funding_Success`   ~ `Number_of_Startup_Hubs` + `Avg_Number_of_Seed_Investors`,
+             data = df)
+model2 <- lm(`Proportion_Exit_Success`      ~ `Number_of_Startup_Hubs` + `Avg_Number_of_Seed_Investors`,
+             data = df)
+
+# Export BOTH models side by side to reg_table.tex
+stargazer(
+  model1, model2,
+  type        = "latex",
+  out         = "reg_table.tex",
+  title       = "Determinants of Success Metrics",
+  label       = "tab:regression",
+  digits      = 2,
+  single.row  = TRUE,    # put each coefficient on one line
+  header      = FALSE,   # suppress LaTeX preamble
+  float       = FALSE,   # suppress its own \begin{table}… wrapper
+  booktabs    = TRUE,    # use \toprule,\midrule,\bottomrule
+  covariate.labels = c(
+    "\\# Hubs",
+    "Avg Seed Investors"
+  ),
+  dep.var.labels.include = FALSE,
+  dep.var.labels = c("Funding Success", "Exit Success")
+)
+
+
+```
+

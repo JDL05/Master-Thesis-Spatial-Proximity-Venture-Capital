@@ -1,0 +1,116 @@
+```{r}
+# 1) install.packages("xtable")  # if you haven’t already
+library(xtable)
+library(dplyr)
+
+# 2) Build the full example data
+set.seed(2025)
+countries <- c(
+  "USA","Germany","India","Brazil","UK",
+  "Canada","Australia","France","China","Japan",
+  "South Korea","Israel","Sweden","Netherlands","Switzerland",
+  "Singapore","Spain","Italy","Mexico","South Africa"
+)
+
+df <- data.frame(
+  Country                           = countries,
+  Founded_Companies                 = sample(200:2000, 20, replace = TRUE),
+  Avg_Seed_Investor_Distance_km     = round(runif(20, 50, 500), 1),
+  Average_Number_of_Founders        = round(runif(20, 1, 5), 1),
+  Number_of_Startup_Hubs            = sample(3:25, 20, replace = TRUE),
+  Avg_Number_of_Seed_Investors      = round(runif(20, 1, 5), 2),
+  Avg_Number_of_Lead_Seed_Investors = round(runif(20, 0, 3), 2),
+  Proportion_Regional_Investors     = round(runif(20, 0.1, 0.6), 2),
+  Proportion_Worldwide_Investors    = round(runif(20, 0.2, 0.7), 2),
+  Proportion_Industry_Specific_VC   = round(runif(20, 0.15, 0.5), 2),
+  Proportion_Regional_Lead_Investors= round(runif(20, 0.1, 0.6), 2),
+  Proportion_Worldwide_Lead_Investors=round(runif(20, 0.2, 0.7), 2),
+  Proportion_Industry_Lead_Investors = round(runif(20, 0.15, 0.5), 2),
+  Proportion_Funding_Success        = round(runif(20, 0.3, 0.8), 2),
+  Proportion_Exit_Success           = round(runif(20, 0.05, 0.25), 2),
+  Average_Distance_to_Hub_km        = round(runif(20, 10, 100), 1),
+  Average_Number_of_Seed_Rounds     = round(runif(20, 1, 4), 2),
+  Average_Exits_of_Investors        = round(runif(20, 0, 2), 2),
+  Avg_Seed_Investors_Portfolio_Orgs = round(runif(20, 5, 50), 1)
+)
+
+# 3) Subset & rename table1
+table1 <- df %>%
+  select(
+    Country,
+    Founded_Companies,
+    Number_of_Startup_Hubs,
+    Average_Number_of_Seed_Rounds,
+    Avg_Seed_Investor_Distance_km,
+    Avg_Number_of_Seed_Investors,
+    Avg_Number_of_Lead_Seed_Investors
+  ) %>%
+  rename(
+    Companies                     = Founded_Companies,
+    `# Hubs`                      = Number_of_Startup_Hubs,
+    `Avg Seed Rounds`   = Average_Number_of_Seed_Rounds,
+    `Avg Seed VC Distance`  = Avg_Seed_Investor_Distance_km,
+    `Avg No. Seed VC`= Avg_Number_of_Seed_Investors,
+    `Avg No. Lead Seed VC` = Avg_Number_of_Lead_Seed_Investors
+  )
+
+# 4) Subset & rename table2
+table2 <- df %>%
+  select(
+    Country,
+    Proportion_Regional_Investors,
+    Proportion_Worldwide_Investors,
+    Proportion_Industry_Specific_VC,
+    Proportion_Regional_Lead_Investors,
+    Proportion_Worldwide_Lead_Investors,
+    Proportion_Industry_Lead_Investors,
+    Proportion_Exit_Success
+  ) %>%
+  rename(
+    `% Regional VC`               = Proportion_Regional_Investors,
+    `% Worldwide VC`              = Proportion_Worldwide_Investors,
+    `% Specific VC`             = Proportion_Industry_Specific_VC,
+    `% Regional Lead VC`          = Proportion_Regional_Lead_Investors,
+    `% Worldwide Lead VC`         = Proportion_Worldwide_Lead_Investors,
+    `% Specific Lead VC` = Proportion_Industry_Lead_Investors,
+    `% Exit Success`                     = Proportion_Exit_Success
+  )
+
+# 5) Build digits vectors (length = ncol + 1)
+digits1 <- c(0, rep(2, ncol(table1)))
+digits2 <- c(0, rep(2, ncol(table2)))
+
+# 6) Export as pure tabular LaTeX
+print(
+  xtable(
+    table1,
+    caption = "Table 1: Descriptive Startup Ecosystem Metrics by Country",
+    label   = "tab:descriptive_metrics",
+    digits  = digits1
+  ),
+  type                 = "latex",
+  include.rownames     = FALSE,
+  include.colnames     = TRUE,
+  booktabs             = TRUE,
+  floating             = FALSE,
+  sanitize.text.function = identity,
+  file                 = "table1.tex"
+)
+
+print(
+  xtable(
+    table2,
+    caption = "Table 2: Proportional & Success Metrics by Country",
+    label   = "tab:proportional_metrics",
+    digits  = digits2
+  ),
+  type                 = "latex",
+  include.rownames     = FALSE,
+  include.colnames     = TRUE,
+  booktabs             = TRUE,
+  floating             = FALSE,
+  sanitize.text.function = identity,
+  file                 = "table2.tex"
+)
+```
+
