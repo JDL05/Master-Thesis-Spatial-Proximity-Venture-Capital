@@ -1,0 +1,64 @@
+---
+title: "explanatory_data_analysis"
+author: "Jan Linzner"
+date: "2025-05-11"
+output: html_document
+---
+# Read Data
+```{r}
+library(readr)
+setwd("~/Projects/Master-Thesis-Spatial-Proximity-Venture-Capital")
+companies_seed <- read_csv("data/sets-for-r/companies_seed.csv")
+investors_seed <- read_csv("data/sets-for-r/investors_seed.csv")
+hubs <- read_csv("data/sets-for-r/startup_hubs.csv")
+```
+
+
+```{r}
+# 0) load packages
+library(dplyr)
+
+# 1) Compute number of hubs per country
+hubs_count <- hubs %>%
+  group_by(country) %>%
+  summarize(Number_of_Startup_Hubs = n(), .groups="drop") %>%
+  rename(Country = country)
+
+# 2) Aggregate companies by headquarters country
+country_summary <- companies_seed %>%
+  # rename for convenience
+  rename(Country = `Headquarters Country`) %>%
+  group_by(Country) %>%
+  summarize(
+    Founded_Companies                 = n(),
+    Avg_Seed_Investor_Distance_km     = mean(`Avg Seed Investor Distance`,      na.rm=TRUE),
+    Average_Number_of_Founders        = mean(`Number of Founders`,              na.rm=TRUE),
+    Avg_Number_of_Seed_Investors      = mean(`Number Seed Investors`,           na.rm=TRUE),
+    Avg_Number_of_Lead_Seed_Investors = mean(`Number of Lead Seed Investors`,   na.rm=TRUE),
+    Proportion_Regional_Investors     = mean(`Regional Seed Investor Binary`,   na.rm=TRUE),
+    Proportion_Worldwide_Investors    = mean(`Worldwide Seed Investor Binary`,  na.rm=TRUE),
+    Proportion_Industry_Specific_VC   = mean(`Industry-Specific VC in Seed Binary`,   na.rm=TRUE),
+    Proportion_Regional_Lead_Investors= mean(`Regional Lead Seed Investor Binary`,    na.rm=TRUE),
+    Proportion_Worldwide_Lead_Investors=mean(`Worldwide Lead Seed Investor Binary`,   na.rm=TRUE),
+    Proportion_Industry_Lead_Investors= mean(`Industry-Specific Lead VC in Seed Binary`,na.rm=TRUE),
+    Proportion_Funding_Success        = mean(`Funding Success`,                 na.rm=TRUE),
+    Proportion_Exit_Success           = mean(`Exit Binary`,                     na.rm=TRUE),
+    Average_Distance_to_Hub_km        = mean(`Distance to Hub`,                na.rm=TRUE),
+    Average_Number_of_Seed_Rounds     = mean(`Number Seed Rounds`,             na.rm=TRUE),
+    Average_Exits_of_Investors        = mean(`Avg Exits of Seed Investors`,    na.rm=TRUE),
+    Avg_Seed_Investors_Portfolio_Orgs = mean(`Average Seed Investors Portfolio Organizations`, na.rm=TRUE),
+    .groups = "drop"
+  ) %>%
+  # 3) bring in the hub counts (fill zero if none)
+  left_join(hubs_count, by = "Country") %>%
+  mutate(Number_of_Startup_Hubs = coalesce(Number_of_Startup_Hubs, 0L))
+
+# 4) Inspect
+print(country_summary)
+
+# 5) Save to CSV
+write.csv(country_summary, "country_summary.csv", row.names=FALSE)
+```
+
+
+
