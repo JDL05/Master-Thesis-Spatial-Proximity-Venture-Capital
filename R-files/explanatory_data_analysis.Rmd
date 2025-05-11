@@ -11,8 +11,10 @@ setwd("~/Projects/Master-Thesis-Spatial-Proximity-Venture-Capital")
 companies_seed <- read_csv("data/sets-for-r/companies_seed.csv")
 investors_seed <- read_csv("data/sets-for-r/investors_seed.csv")
 hubs <- read_csv("data/sets-for-r/startup_hubs.csv")
+seed_help <- read_csv("data/sets-for-r/seed_help.csv")
 ```
 
+# Company View
 
 ```{r}
 # 0) load packages
@@ -59,6 +61,82 @@ print(country_summary)
 # 5) Save to CSV
 write.csv(country_summary, "country_summary.csv", row.names=FALSE)
 ```
+
+# Investor View
+
+
+```{r}
+# 2) Convert 'Successful Investments Count' from character → numeric
+investors_seed <- investors_seed %>%
+  mutate(
+    SuccessfulExits = as.numeric(`Successful Investments Count`)
+  )
+
+# 3) Build the full join and drop any NA countries or NA exits
+inv_full <- seed_help %>%
+  left_join(
+    companies_seed %>% select(`Company ID`, Investee_Country = `Headquarters Country`),
+    by = "Company ID"
+  ) %>%
+  left_join(
+    investors_seed %>% select(
+      `Investor ID`,
+      UniqueCompanies   = `Unique Companies Count`,
+      SuccessfulExits,                # now numeric
+      LocalInvestorVC   = `Local Investor`,
+      IndSpecVCbinary   = `Industry-Specific VC Binary`
+    ),
+    by = "Investor ID"
+  ) %>%
+  filter(
+    !is.na(Investee_Country),       # must have a country
+    !is.na(SuccessfulExits)         # drop any NA after conversion
+  )
+
+# 4) Summarise per investee country
+investor_summary_pretty <- inv_full %>%
+  group_by(Country = Investee_Country) %>%
+  summarise(
+    `Total VC`                           = n_distinct(`Investor ID`),
+    `Unique Regional VC`                 = n_distinct(`Investor ID`[LocalInvestorVC == TRUE]),
+    `Unique Worldwide VC`                = n_distinct(`Investor ID`[LocalInvestorVC == FALSE]),
+    `Unique Industry-Specific VC`        = n_distinct(`Investor ID`[IndSpecVCbinary == TRUE]),
+    `Average VC Portfolio Organizations` = mean(UniqueCompanies,   na.rm = TRUE),
+    `Average Exits by VC`                = mean(SuccessfulExits,   na.rm = TRUE),
+    .groups                                = "drop"
+  )
+
+# 5) Export as LaTeX tabular via xtable
+#    We have 7 real columns → digits length = 8
+digits <- c(
+  0,  # hidden rownames
+  0,  # Country
+  0,  # Total VC
+  0,  # Unique Regional VC
+  0,  # Unique Worldwide VC
+  0,  # Unique Industry-Specific VC
+  2,  # Average VC Portfolio Organizations
+  2   # Average Exits by VC
+)
+
+print(
+  xtable(
+    investor_summary_pretty,
+    caption = "VC Activity by Investee Company Country (All Seed Rounds)",
+    label   = "tab:vc_by_company_country_all",
+    digits  = digits
+  ),
+  type                   = "latex",
+  file                   = "table_investors_by_company_country.tex",
+  include.rownames       = FALSE,
+  include.colnames       = TRUE,
+  booktabs               = TRUE,
+  floating               = FALSE,
+  sanitize.text.function = identity
+)
+```
+
+
 
 
 
