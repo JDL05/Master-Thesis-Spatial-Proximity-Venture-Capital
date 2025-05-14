@@ -4,9 +4,10 @@ author: "Jan Linzner"
 date: "2025-05-11"
 output: html_document
 ---
-# Read Data
+# Read Data and Packages
 ```{r}
 library(readr)
+library(xtable)
 setwd("~/Projects/Master-Thesis-Spatial-Proximity-Venture-Capital")
 companies_seed <- read_csv("data/sets-for-r/companies_seed.csv")
 investors_seed <- read_csv("data/sets-for-r/investors_seed.csv")
@@ -14,7 +15,8 @@ hubs <- read_csv("data/sets-for-r/startup_hubs.csv")
 seed_help <- read_csv("data/sets-for-r/seed_help.csv")
 ```
 
-# Company View
+
+# Company View by Country
 
 ```{r}
 # 0) load packages
@@ -62,8 +64,7 @@ print(country_summary)
 write.csv(country_summary, "country_summary.csv", row.names=FALSE)
 ```
 
-# Investor View
-
+# Investor View by Country
 
 ```{r}
 # 2) Convert 'Successful Investments Count' from character → numeric
@@ -136,7 +137,159 @@ print(
 )
 ```
 
+# Companies founded by year and classified by success/no success
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(viridis)  # if you want to start from viridis palettes
+library(scales)
+
+# 1) Prepare data
+df_plot <- companies_seed %>%
+  mutate(
+    Founded_Year = as.integer(`Founded Year`),
+    Success_Flag = factor(
+      ifelse(`Success` %in% c(TRUE, 1), "Success", "No Success"),
+      levels = c("No Success","Success")
+    )
+  ) %>%
+  filter(!is.na(Founded_Year)) %>%
+  count(Founded_Year, Success_Flag, name = "Count")
+
+# 2) Define your custom colors here:
+my_colors <- c(
+  "No Success" = "#E15759",   # e.g. a red
+  "Success"    = "#4E79A7"    # e.g. a blue
+)
+
+# 3) Compute full x-axis sequence
+all_years <- seq(min(df_plot$Founded_Year), max(df_plot$Founded_Year), by = 1)
+
+# 4) Plot
+ggplot(df_plot, aes(x = Founded_Year, y = Count, fill = Success_Flag)) +
+  geom_col(width = 0.7, color = "black", size = 0.2) +
+  scale_fill_manual(
+    name   = "Outcome",
+    values = my_colors
+  ) +
+  scale_x_continuous(
+    breaks = all_years,         # every year
+    expand = c(0, 0)            # no padding on either side
+  ) +
+  labs(
+    title = "Companies Founded per Year by Success Outcome",
+    x     = "Year Founded",
+    y     = "Number of Companies"
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor   = element_blank(),
+    axis.line          = element_line(color = "black"),
+    axis.ticks         = element_line(color = "black"),
+    axis.text.x        = element_text(angle = 90, vjust = 0.5, hjust = 1),
+    legend.position    = "top"
+  )
+```
 
 
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+
+# prepare the data as before
+df_inv <- investor_summary_pretty %>%
+  select(
+    Country,
+    Regional   = `Unique Regional VC`,
+    Worldwide  = `Unique Worldwide VC`
+  ) %>%
+  pivot_longer(-Country, names_to="Investor_Type", values_to="Count")
+
+# force A→Z top to bottom
+country_levels <- sort(unique(df_inv$Country))
+df_inv$Country   <- factor(df_inv$Country, levels=rev(country_levels))
+
+# your custom colors
+my_colors <- c("Regional"="#E15759","Worldwide"="#4E79A7")
+
+ggplot(df_inv, aes(x = Country, y = Count, fill = Investor_Type)) +
+  geom_col(position = "fill", color="white", size=0.2) +
+  
+  # 1) Expand the 0–1 scale to leave 3% blank on the right
+  scale_y_continuous(
+    labels = percent_format(1),
+    expand = expansion(mult = c(0, 0.03))
+  ) +
+  
+  # 2) Your fill and labels
+  scale_fill_manual(
+    name   = "Investor Type",
+    values = my_colors,
+    labels = c("Regional VC","Worldwide VC")
+  ) +
+  coord_flip() +
+  labs(
+    title = "Proportion of Regional vs. Worldwide VCs by Country",
+    x     = NULL,
+    y     = "Share of Unique Investors"
+  ) +
+  
+  # 3) Add a bit more right margin
+  theme_minimal(base_size = 10) +
+  theme(
+    legend.position    = "top",
+    panel.grid.major.x = element_line(color="gray80"),
+    panel.grid.minor   = element_blank(),
+    axis.text.y        = element_text(size=10),
+    plot.margin        = margin(t=5, r=20, b=5, l=5)  # increase right margin
+  )
+```
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# 1) Prepare a ranking data frame
+rank_df <- country_summary %>%
+  # pick the metric you want—here Founded_Companies
+  arrange(Founded_Companies) %>%
+  # make Country a factor in this sorted order
+  mutate(Country = factor(Country, levels = Country))
+
+# 2) Plot the lollipop
+ggplot(rank_df, aes(x = Country, y = Founded_Companies)) +
+  # draw a thin gray line from y=0 up to the point
+  geom_segment(aes(xend = Country, y = 0, yend = Founded_Companies),
+               color = "gray70") +
+  # draw a solid circle at the value
+  geom_point(color = "#4E79A7", size = 3) +
+  # flip so countries run A→Z top→bottom
+  coord_flip() +
+  # labels and theme
+  labs(
+    title = "Countries Ranked by Number of Founded Companies",
+    x     = NULL,
+    y     = "Founded Companies"
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor   = element_blank(),
+    axis.text.y        = element_text(size = 10),
+    plot.margin        = margin(t = 5, r = 15, b = 5, l = 5)
+  )
+```
+
+```{r}
+hubs
+companies_seed
+seed_help
+investors_seed
+```
 
 
