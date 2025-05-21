@@ -16,6 +16,301 @@ seed_help <- read_csv("data/sets-for-r/seed_help.csv")
 ```
 
 
+
+# Table Generation for Thesis
+## Companies
+
+```{r}
+# 0) dependencies
+# install.packages(c("tidyverse","xtable"))
+library(tidyverse)
+library(xtable)
+
+# (assume companies_seed and hubs are already loaded)
+
+# 1) helper to compute per‐group summary
+make_summary <- function(data, group_name){
+  data %>%
+    summarise(
+      Country                   = group_name,
+      n                         = n(),
+      Avg_Seed_Rounds           = mean(`Number Seed Rounds`,       na.rm = TRUE),
+      Avg_Seed_Investors        = mean(`Number Seed Investors`,    na.rm = TRUE),
+      Avg_Seed_Investor_Dist_km = mean(`Avg Seed Investor Distance`,na.rm = TRUE),
+      Pct_in_Hubs               = mean(`Hub Binary`,                na.rm = TRUE) * 100,
+      Avg_Hub_Dist_km           = mean(`Distance to Hub`,          na.rm = TRUE),
+      Avg_Num_Founders          = mean(`Number of Founders`[`Number of Founders` > 0],
+                                        na.rm = TRUE),
+      Avg_Years_to_Seed         = mean(`Years to Seed`,             na.rm = TRUE),
+      Pct_Success               = mean(`Success`,                   na.rm = TRUE) * 100
+    )
+}
+
+# 2) compute per‐country + “Europe”
+by_country <- companies_seed %>%
+  group_by(`Headquarters Country`) %>%
+  group_map(~ make_summary(.x, .y$`Headquarters Country`), .keep = TRUE) %>%
+  bind_rows()
+
+europe <- make_summary(companies_seed, "Europe")
+
+# 3) bind & sort A–Z
+summary_tbl <- bind_rows(by_country, europe) %>%
+  arrange(Country)
+
+# 4) rename for LaTeX
+summary_tbl <- summary_tbl %>%
+  rename(
+    Country             = Country,
+    N                   = n,
+    `Avg Seed Rounds`   = Avg_Seed_Rounds,
+    `Avg Seed Investors`= Avg_Seed_Investors,
+    `Avg VC Dist. (km)` = Avg_Seed_Investor_Dist_km,
+    `% in Hubs`         = Pct_in_Hubs,
+    `Avg Hub Dist. (km)`= Avg_Hub_Dist_km,
+    `Avg # Founders`    = Avg_Num_Founders,
+    `Avg Years to Seed` = Avg_Years_to_Seed,
+    `% Success`         = Pct_Success
+  )
+
+# 5) bring in Number of Hubs (0 if none)
+hubs_count <- hubs %>%
+  count(country) %>%
+  rename(Country = country, `Number of Hubs` = n)
+
+europe_hubs <- nrow(hubs)
+
+summary_tbl <- summary_tbl %>%
+  left_join(hubs_count, by = "Country") %>%
+  mutate(`Number of Hubs` = replace_na(`Number of Hubs`, 0))
+
+# 6) split off Europe
+others     <- summary_tbl %>% filter(Country != "Europe")
+europe_row <- summary_tbl %>% filter(Country == "Europe") %>%
+                mutate(`Number of Hubs` = europe_hubs)
+
+# 7) format “others”
+others_char <- others %>%
+  mutate(
+    Country              = as.character(Country),
+    N                    = as.character(N),
+    `Number of Hubs`     = as.character(`Number of Hubs`),
+    `% in Hubs`          = if_else(
+                             `Number of Hubs` == "0",
+                             "-",
+                             sprintf("%.2f", `% in Hubs`)
+                           ),
+    `Avg Hub Dist. (km)` = if_else(
+                             `Number of Hubs` == "0",
+                             "-",
+                             sprintf("%.2f", `Avg Hub Dist. (km)`)
+                           ),
+    across(
+      c(`Avg Seed Rounds`, `Avg Seed Investors`, `Avg VC Dist. (km)`,
+        `Avg # Founders`, `Avg Years to Seed`, `% Success`),
+      ~ sprintf("%.2f", .)
+    )
+  )
+
+# 8) format + bold “Europe”
+europe_char <- europe_row %>%
+  mutate(
+    Country              = paste0("\\textbf{", Country, "}"),
+    N                    = paste0("\\textbf{", N, "}"),
+    `Number of Hubs`     = paste0("\\textbf{", europe_hubs, "}"),
+    `% in Hubs`          = paste0("\\textbf{", sprintf("%.2f", `% in Hubs`), "}"),
+    `Avg Hub Dist. (km)` = paste0("\\textbf{", sprintf("%.2f", `Avg Hub Dist. (km)`), "}"),
+    across(
+      c(`Avg Seed Rounds`, `Avg Seed Investors`, `Avg VC Dist. (km)`,
+        `Avg # Founders`, `Avg Years to Seed`, `% Success`),
+      ~ paste0("\\textbf{", sprintf("%.2f", .), "}")
+    )
+  )
+
+# 9) recombine & reorder columns
+final_tbl <- bind_rows(others_char, europe_char) %>%
+  select(
+    Country, N, `Avg Seed Rounds`, `Avg Seed Investors`,
+    `Avg VC Dist. (km)`, `Number of Hubs`, `% in Hubs`,
+    `Avg Hub Dist. (km)`, `Avg # Founders`, `Avg Years to Seed`, `% Success`
+  )
+
+# 10) export LaTeX table
+print(
+  xtable(
+    final_tbl,
+    caption = "Summary of Seed-stage Companies by Country (and Europe overall)",
+    label   = "tab:seed_summary",
+    digits  = rep(0, ncol(final_tbl) + 1)
+  ),
+  type                       = "latex",
+  include.rownames           = FALSE,
+  booktabs                   = TRUE,
+  floating                   = FALSE,
+  sanitize.text.function     = identity,
+  sanitize.colnames.function = function(x) {
+    x %>% gsub("%", "\\\\%", .) %>% gsub("#", "\\\\#", .)
+  },
+  file                       = "table_seed_summary.tex"
+)
+
+print(final_tbl)
+```
+
+
+
+```{r}
+# 0) dependencies
+# install.packages(c("tidyverse","xtable"))
+library(tidyverse)
+library(xtable)
+
+
+# 2) count lead‐seed rounds per company
+lead_rounds <- seed_help %>%
+  filter(Lead) %>%
+  group_by(`Company ID`) %>%
+  summarise(Number_of_Seed_Lead_Rounds = n_distinct(`Round ID`), .groups="drop")
+
+# 3) join back to companies
+comp <- companies_seed %>%
+  left_join(lead_rounds, by="Company ID") %>%
+  mutate(Number_of_Seed_Lead_Rounds = replace_na(Number_of_Seed_Lead_Rounds, 0))
+
+# 4) count hubs per country
+hubs_count  <- hubs %>% count(country) %>% rename(Country=country, Number_of_Hubs=n)
+europe_hubs <- nrow(hubs)
+
+# 5) summary by country
+df <- comp %>%
+  rename(Country = `Headquarters Country`) %>%
+  group_by(Country) %>%
+  summarise(
+    Number_of_Companies            = n(),
+    Number_of_Seed_Rounds          = sum(`Number Seed Rounds`,      na.rm=TRUE),
+    Avg_Seed_Rounds                = mean(`Number Seed Rounds`,     na.rm=TRUE),
+    Avg_Seed_Investors             = mean(`Number Seed Investors`,  na.rm=TRUE),
+    Avg_Age_Seed_Investors         = mean(`Avg Age of Seed Investors`, na.rm=TRUE),
+    Avg_Exits_of_Seed_Investors    = mean(`Avg Exits of Seed Investors`, na.rm=TRUE),
+    Avg_Portfolio_Orgs             = mean(`Average Seed Investors Portfolio Organizations`, na.rm=TRUE),
+
+    Number_of_Seed_Lead_Rounds     = sum(Number_of_Seed_Lead_Rounds, na.rm=TRUE),
+    Avg_Seed_Lead_Rounds           = mean(Number_of_Seed_Lead_Rounds, na.rm=TRUE),
+    Avg_Seed_Lead_Investors        = mean(`Number of Lead Seed Investors`, na.rm=TRUE),
+
+    Avg_Dist_to_Seed_Inv           = mean(`Avg Seed Investor Distance`, na.rm=TRUE),
+
+    Pct_in_Hubs                    = mean(`Hub Binary`, na.rm=TRUE)*100,
+    Avg_Hub_Dist_km                = mean(`Distance to Hub`, na.rm=TRUE),
+
+    Pct_Regional_VC                = mean(`Regional Seed Investor Binary`, na.rm=TRUE)*100,
+    Pct_Overregional_VC            = mean(`Overregional Seed Investor Binary`, na.rm=TRUE)*100,
+    Pct_Industry_Specific_VC       = mean(`Industry-Specific VC in Seed Binary`, na.rm=TRUE)*100,
+    Pct_Accelerator                = mean(`Accelerator Funding Binary`, na.rm=TRUE)*100,
+    Pct_Angel_Group                = mean(`Angel Group Funding Binary`, na.rm=TRUE)*100,
+    Pct_Micro_VC                   = mean(`Micro VC Funding Binary`, na.rm=TRUE)*100,
+    Pct_Corporate_VC               = mean(`Corporate Venture Capital Funding Binary`, na.rm=TRUE)*100,
+
+    Pct_Regional_Lead_VC           = mean(`Regional Lead Seed Investor Binary`, na.rm=TRUE)*100,
+    Pct_Overregional_Lead_VC       = mean(`Overregional Lead Seed Investor Binary`, na.rm=TRUE)*100,
+    Pct_Industry_Lead_VC           = mean(`Industry-Specific Lead VC in Seed Binary`, na.rm=TRUE)*100,
+    Pct_Accelerator_Lead           = mean(`Accelerator Lead Funding Binary`, na.rm=TRUE)*100,
+    Pct_Angel_Group_Lead           = mean(`Angel Group Lead Funding Binary`, na.rm=TRUE)*100,
+    Pct_Micro_VC_Lead              = mean(`Micro VC Lead Funding Binary`, na.rm=TRUE)*100,
+    Pct_Corporate_VC_Lead          = mean(`Corporate Venture Capital Lead Funding Binary`, na.rm=TRUE)*100,
+    .groups="drop"
+  ) %>%
+  left_join(hubs_count, by="Country") %>%
+  mutate(Number_of_Hubs = replace_na(Number_of_Hubs, 0))
+
+# 6) add Europe as overall row (optional)
+europe <- df %>%
+  summarise(across(where(is.numeric), sum, na.rm=TRUE)) %>%
+  mutate(Country="Europe", Number_of_Hubs=europe_hubs)
+df <- bind_rows(df, europe)
+
+# 7) five tables
+
+# Table 1
+t1 <- df %>% select(Country,
+                    Number_of_Companies,
+                    Number_of_Seed_Rounds,
+                    Avg_Seed_Rounds,
+                    Avg_Seed_Investors,
+                    Avg_Exits_of_Seed_Investors,
+                    Avg_Portfolio_Orgs)
+
+# Table 2 (dropping uncomputable age/exits/portfolio for leads)
+t2 <- df %>% select(Country,
+                    Number_of_Companies,
+                    Number_of_Seed_Lead_Rounds,
+                    Avg_Seed_Lead_Rounds,
+                    Avg_Seed_Lead_Investors)
+
+# Table 3
+t3 <- df %>% select(Country,
+                    Number_of_Companies,
+                    Avg_Dist_to_Seed_Inv,
+                    Number_of_Hubs,
+                    Pct_in_Hubs,
+                    Avg_Hub_Dist_km)
+
+# Table 4
+t4 <- df %>% select(Country,
+                    Number_of_Companies,
+                    Pct_Regional_VC,
+                    Pct_Overregional_VC,
+                    Pct_Industry_Specific_VC,
+                    Pct_Accelerator,
+                    Pct_Angel_Group,
+                    Pct_Micro_VC,
+                    Pct_Corporate_VC)
+
+# Table 5 (dropping age)
+t5 <- df %>% select(Country,
+                    Number_of_Companies,
+                    Avg_Seed_Lead_Investors,
+                    Pct_Regional_Lead_VC,
+                    Pct_Overregional_Lead_VC,
+                    Pct_Industry_Lead_VC,
+                    Pct_Accelerator_Lead,
+                    Pct_Angel_Group_Lead,
+                    Pct_Micro_VC_Lead,
+                    Pct_Corporate_VC_Lead)
+
+# 8) export them
+tables <- list(t1,t2,t3,t4,t5)
+files  <- paste0("table",1:5,".tex")
+caps   <- c("Seed Metrics","Lead‐Seed Metrics",
+            "Distance & Hubs","Seed Investor Types","Lead Investor Types")
+labels <- paste0("tab:tbl",1:5)
+
+for(i in seq_along(tables)) {
+  print(
+    xtable(tables[[i]],
+           caption = caps[i],
+           label   = labels[i],
+           digits  = c(0, rep(2, ncol(tables[[i]])))
+    ),
+    type                     = "latex",
+    include.rownames         = FALSE,
+    booktabs                 = TRUE,
+    floating                 = FALSE,
+    sanitize.text.function   = identity,
+    sanitize.colnames.function = function(x) gsub("%","\\\\%",x),
+    file                     = files[i]
+  )
+}
+
+print(t1)
+```
+
+
+
+
+
+
+
 # Company View by Country
 
 ```{r}
@@ -291,5 +586,8 @@ companies_seed
 seed_help
 investors_seed
 ```
+
+
+
 
 

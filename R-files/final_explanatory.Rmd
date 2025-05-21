@@ -1,0 +1,423 @@
+---
+title: "final_explanatory-data-analysis"
+author: "Jan Linzner"
+date: "2025-05-21"
+output: html_document
+---
+```{r}
+library(readr)
+library(xtable)
+library(tidyverse)
+setwd("~/Projects/Master-Thesis-Spatial-Proximity-Venture-Capital")
+companies_seed <- read_csv("data/sets-for-r/companies_seed.csv")
+investors_seed <- read_csv("data/sets-for-r/investors_seed.csv")
+hubs <- read_csv("data/sets-for-r/startup_hubs.csv")
+seed_help <- read_csv("data/sets-for-r/seed_help.csv")
+```
+
+## Companies - Overall
+
+```{r}
+make_summary <- function(data, group_name) {
+  data %>%
+    summarise(
+      Country                   = group_name,
+      n                         = n(),
+      Avg_Seed_Rounds           = mean(`Number Seed Rounds`,        na.rm = TRUE),
+      Avg_Seed_Investors        = mean(`Number Seed Investors`,     na.rm = TRUE),
+      Avg_Seed_Lead_Investors   = mean(`Number Lead Seed Investors`, na.rm = TRUE),
+      Avg_Seed_Investor_Dist_km = mean(`Avg Seed Investor Distance`, na.rm = TRUE),
+      Pct_in_Hubs               = mean(`Hub Binary`,                 na.rm = TRUE) * 100,
+      Avg_Hub_Dist_km           = mean(`Distance to Hub`,           na.rm = TRUE),
+      Avg_Num_Founders          = mean(`Number of Founders`[`Number of Founders` > 0],
+                                        na.rm = TRUE),
+      Avg_Years_to_Seed         = mean(`Years to Seed`,              na.rm = TRUE),
+      Pct_Success               = mean(`Success`,                    na.rm = TRUE) * 100
+    )
+}
+
+by_country <- companies_seed %>%
+  group_by(`Headquarters Country`) %>%
+  group_map(~ make_summary(.x, .y$`Headquarters Country`), .keep = TRUE) %>%
+  bind_rows()
+
+europe_summary <- make_summary(companies_seed, "Europe")
+
+summary_tbl <- bind_rows(by_country, europe_summary) %>%
+  arrange(Country)
+
+hubs_count   <- hubs %>%
+  count(country) %>%
+  rename(Country = country, `Number of Hubs` = n)
+europe_hubs  <- nrow(hubs)
+
+summary_tbl <- summary_tbl %>%
+  left_join(hubs_count, by = "Country") %>%
+  mutate(`Number of Hubs` = replace_na(`Number of Hubs`, 0))
+
+summary_tbl <- summary_tbl %>%
+  rename(
+    N                         = n,
+    `Avg Seed Rounds`         = Avg_Seed_Rounds,
+    `Avg Seed Investors`      = Avg_Seed_Investors,
+    `Avg Lead Seed Investors` = Avg_Seed_Lead_Investors,
+    `Avg VC Dist. (km)`       = Avg_Seed_Investor_Dist_km,
+    `% in Hubs`               = Pct_in_Hubs,
+    `Avg Hub Dist. (km)`      = Avg_Hub_Dist_km,
+    `Avg # Founders`          = Avg_Num_Founders,
+    `Avg Years to Seed`       = Avg_Years_to_Seed,
+    `% Success`               = Pct_Success
+  )
+
+formatted <- summary_tbl %>%
+  select(
+    Country, N,
+    `Avg Seed Rounds`, `Avg Seed Investors`, `Avg Lead Seed Investors`,
+    `Avg Years to Seed`, `Avg # Founders`,
+    `Avg VC Dist. (km)`, `% in Hubs`, `Avg Hub Dist. (km)`,
+    `Number of Hubs`, `% Success`
+  ) %>%
+  mutate(across(where(is.numeric), ~ sprintf("%.2f", .))) %>%
+  mutate(across(c(N, `Number of Hubs`), as.character))
+
+others_tbl <- formatted %>% filter(Country != "Europe")
+europe_tbl <- formatted %>% filter(Country == "Europe")
+
+europe_bold <- europe_tbl %>%
+  mutate(across(everything(), ~ paste0("\\textbf{", ., "}")))
+
+final_tbl_clean <- bind_rows(others_tbl, europe_bold)
+
+print(
+  xtable(
+    final_tbl_clean,
+    caption = "Summary of Seed-stage Companies by Country",
+    label   = "tab:seed_summary_clean",
+    digits  = rep(0, ncol(final_tbl_clean) + 1)
+  ),
+  type                       = "latex",
+  include.rownames           = FALSE,
+  booktabs                   = TRUE,
+  sanitize.text.function     = identity,
+  sanitize.colnames.function = function(x) {
+    x %>% gsub("%","\\\\%",.) %>% gsub("#","\\\\#",.)
+  },
+  file                       = "table_seed_summary_clean.tex"
+)
+
+print(final_tbl_clean, width = Inf)
+```
+## Companies - Hubs
+```{r hub-summary, message=FALSE, warning=FALSE}
+company_counts <- companies_seed |>
+  count(`Headquarters Country`, name = "N")
+
+hub_success_stats <- companies_seed |>
+  filter(`Hub Binary` == 1) |>
+  group_by(`Headquarters Country`) |>
+  summarise(
+    `N Startups in Hubs`  = n(),
+    `N Success in Hubs`   = sum(Success, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+total_success_stats <- companies_seed |>
+  group_by(`Headquarters Country`) |>
+  summarise(`N Success Cases` = sum(Success, na.rm = TRUE), .groups = "drop")
+
+hub_share_stats <- companies_seed |>
+  group_by(`Headquarters Country`) |>
+  summarise(
+    `% Startups in Hubs` = mean(`Hub Binary`, na.rm = TRUE) * 100,
+    `Avg Hub Dist. (km)` = mean(`Distance to Hub`, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+hubs_count <- hubs |>
+  count(country, name = "Number of Hubs") |>
+  rename(Country = country)
+
+hub_summary <- hubs_count |>
+  full_join(company_counts,      by = c("Country" = "Headquarters Country")) |>
+  full_join(hub_success_stats,   by = c("Country" = "Headquarters Country")) |>
+  full_join(total_success_stats, by = c("Country" = "Headquarters Country")) |>
+  full_join(hub_share_stats,     by = c("Country" = "Headquarters Country")) |>
+  mutate(
+
+    `% Success in Hubs`        = (`N Success in Hubs` / `N Success Cases`) * 100,
+    
+    `Success Rate (All)`        = (`N Success Cases`   / N)                    * 100,
+    `Success Rate in Hubs`      = (`N Success in Hubs` / `N Startups in Hubs`) * 100,
+    `Success Rate outside Hubs` = ((`N Success Cases` - `N Success in Hubs`) /
+                                   pmax(N - `N Startups in Hubs`, 1)) * 100
+  )
+
+all_countries <- companies_seed |>
+  distinct(`Headquarters Country`) |>
+  rename(Country = `Headquarters Country`)
+
+hub_tbl_full <- all_countries |>
+  left_join(hub_summary, by = "Country")
+
+fmt_pct <- function(x) {
+  ifelse(is.na(x) | x == 0, "–", sprintf('%.2f', x))
+}
+
+pretty_tbl <- hub_tbl_full |>
+  mutate(
+    across(
+      c(N, `Number of Hubs`, `N Startups in Hubs`,
+        `N Success Cases`, `N Success in Hubs`),
+      \(x) ifelse(is.na(x), "–", as.character(x))
+    ),
+    across(
+      c(`% Startups in Hubs`, `Avg Hub Dist. (km)`,
+        `Success Rate (All)`, `Success Rate in Hubs`,
+        `Success Rate outside Hubs`, `% Success in Hubs`),
+      fmt_pct
+    )
+  )
+
+eu_N             <- nrow(companies_seed)
+
+eu_hub_N         <- sum(companies_seed$`Hub Binary`,                       na.rm = TRUE)
+eu_success_N     <- sum(companies_seed$Success,                            na.rm = TRUE)
+eu_hub_success_N <- sum(companies_seed$Success * companies_seed$`Hub Binary`,
+                        na.rm = TRUE)
+
+eu_row <- tibble(
+  Country              = "\\textbf{Europe}",
+  N                    = paste0("\\textbf{", eu_N, "}"),
+  `Number of Hubs`     = paste0("\\textbf{", nrow(hubs), "}"),
+  `% Startups in Hubs` = paste0("\\textbf{", fmt_pct(eu_hub_N / eu_N * 100), "}"),
+  `N Startups in Hubs` = paste0("\\textbf{", eu_hub_N, "}"),
+  `Avg Hub Dist. (km)` = paste0("\\textbf{", fmt_pct(
+                                   mean(companies_seed$`Distance to Hub`, na.rm = TRUE)
+                                 ), "}"),
+  `N Success Cases`          = paste0("\\textbf{", eu_success_N, "}"),
+  `Success Rate (All)`       = paste0("\\textbf{", fmt_pct(eu_success_N / eu_N * 100), "}"),
+  `N Success in Hubs`        = paste0("\\textbf{", eu_hub_success_N, "}"),
+  `% Success in Hubs`        = paste0("\\textbf{", fmt_pct(eu_hub_success_N / eu_success_N * 100), "}"),
+  `Success Rate in Hubs`     = paste0("\\textbf{", fmt_pct(eu_hub_success_N / eu_hub_N * 100), "}"),
+  `Success Rate outside Hubs`= paste0("\\textbf{", fmt_pct(
+                                         (eu_success_N - eu_hub_success_N) /
+                                         (eu_N - eu_hub_N) * 100
+                                       ), "}")
+)
+
+hub_tbl_final <- bind_rows(pretty_tbl, eu_row) |>
+  arrange(Country) |>
+  select(
+    Country,
+    N, `Number of Hubs`,
+    `N Startups in Hubs`, `% Startups in Hubs`, `Avg Hub Dist. (km)`,
+    `N Success Cases`, `N Success in Hubs`,
+    `Success Rate (All)`, `Success Rate in Hubs`,
+    `Success Rate outside Hubs`, `% Success in Hubs`
+  )
+
+print(
+  xtable(
+    hub_tbl_final,
+    caption = "Hub structure and success by country",
+    label   = "tab:hub_summary",
+    digits  = rep(0, ncol(hub_tbl_final) + 1)
+  ),
+  type         = "latex",
+  file         = "table_hub_summary.tex",
+  include.rownames = FALSE,
+  booktabs     = TRUE,
+  floating     = FALSE,
+  sanitize.text.function = identity,
+  sanitize.colnames.function = \(x) gsub("%", "\\\\%", gsub("#", "\\\\#", x))
+)
+
+hub_tbl_final  
+```
+```{r seed-investor-summary, message=FALSE, warning=FALSE}
+fmt2 <- function(x){
+  ifelse(is.na(x),
+         "–",
+         sub("\\.?0+$", "", sprintf("%.2f", round(x, 2))))
+}
+
+investor_tbl <- companies_seed %>% 
+  group_by(Country = `Headquarters Country`) %>% 
+  summarise(
+    N                          = n(),
+    `N Regional`               = sum(`Regional Seed Investor Binary`,        na.rm = TRUE),
+    `N Overregional`           = sum(`Overregional Seed Investor Binary`,    na.rm = TRUE),
+    `N Specific VC`            = sum(`Specific VC in Seed Binary`,  na.rm = TRUE),
+    `N Accelerator`            = sum(`Accelerator Funding Binary`,           na.rm = TRUE),
+    `N CVC`                    = sum(`Corporate Venture Capital Funding Binary`, na.rm = TRUE),
+    .groups = "drop"
+  ) %>% 
+  mutate(
+    `% Regional`             = `N Regional`             / N * 100,
+    `% Overregional`         = `N Overregional`         / N * 100,
+    `% Specific VC`          = `N Specific VC` / N * 100,
+    `% Accelerator`          = `N Accelerator`          / N * 100,
+    `% CVC`                  = `N CVC`                  / N * 100
+  )
+
+investor_tbl_fmt <- investor_tbl %>% 
+  arrange(Country) %>% 
+  mutate(
+    across(starts_with("N"), as.character),
+    across(starts_with("%"), fmt2)
+  )
+
+eu_row <- investor_tbl %>%                              
+  summarise(
+    Country                    = "\\textbf{Europe}",
+    N                          = sum(N),
+    `N Regional`               = sum(`N Regional`),
+    `N Overregional`           = sum(`N Overregional`),
+    `N Specific VC`            = sum(`N Specific VC`),
+    `N Accelerator`            = sum(`N Accelerator`),
+    `N CVC`                    = sum(`N CVC`)
+  ) %>% 
+  mutate(
+    `% Regional`             = `N Regional`             / N * 100,
+    `% Overregional`         = `N Overregional`         / N * 100,
+    `% Specific VC` = `N Specific VC` / N * 100,
+    `% Accelerator`          = `N Accelerator`          / N * 100,
+    `% CVC`                  = `N CVC`                  / N * 100
+  ) %>% 
+  mutate(
+    across(starts_with("N"), as.character),
+    across(starts_with("%"), fmt2),
+    across(everything(), \(x) paste0("\\textbf{", x, "}"))
+  )
+
+final_tbl <- bind_rows(investor_tbl_fmt, eu_row) %>% 
+  select(
+    Country, N,
+    `N Regional`, `% Regional`,
+    `N Overregional`, `% Overregional`,
+    `N Specific VC`, `% Specific VC`,
+    `N Accelerator`, `% Accelerator`,
+    `N CVC`, `% CVC`
+  )
+
+print(
+  xtable(
+    final_tbl,
+    caption = "Seed-stage companies by investor type and country",
+    label   = "tab:seed_investor_summary",
+    digits  = 0           # all strings already formatted
+  ),
+  include.rownames           = FALSE,
+  booktabs                   = TRUE,
+  floating                   = FALSE,
+  sanitize.text.function     = identity,
+  sanitize.colnames.function = \(x) gsub("%", "\\\\%", x),
+  file                       = "table_seed_investor_summary.tex"
+)
+
+final_tbl      
+```
+
+## Investors - General
+
+```{r}
+deals <- seed_help %>%
+  semi_join(companies_seed, by = "Company ID") %>%                  
+  inner_join(investors_seed %>% select(`Investor ID`),               
+             by = "Investor ID") %>%
+  distinct(`Round ID`, `Investor ID`, .keep_all = TRUE) %>%         
+  left_join(companies_seed %>% select(`Company ID`, Success),
+            by = "Company ID")                                      
+
+companies_seed <- companies_seed %>%
+  semi_join(deals %>% distinct(`Company ID`), by = "Company ID")
+
+tot_inv   <- deals %>% pull(`Investor ID`)   %>% n_distinct()
+tot_deals <- nrow(deals)
+tot_comp  <- deals %>% pull(`Company ID`)    %>% n_distinct()
+tot_succ  <- sum(deals$Success, na.rm = TRUE)
+
+inv_flags <- investors_seed %>%
+  select(`Investor ID`,
+         `Local Investor`,
+         `Specific VC Binary`,
+         Accelerator,
+         `Corporate Venture Capital`,
+         `Micro VC`,
+         `Hub Investor`,
+         `Lead Investor`) %>%
+  mutate(across(-`Investor ID`, ~ replace_na(.x, FALSE))) %>%
+  semi_join(deals, by = "Investor ID")  
+
+cats <- c(
+  "Investors"                 = NA,
+  "Local Investor"            =  "Local Investor",
+  "Overregional Investor"     = "!Local Investor",
+  "Specific VC"               =  "Specific VC Binary",
+  "Non-specific VC"           = "!Specific VC Binary",
+  "Accelerator"               =  "Accelerator",
+  "Corporate Venture Capital" =  "Corporate Venture Capital",
+  "Micro VC"                  =  "Micro VC",
+  "Hub Investor"              =  "Hub Investor",
+  "Non-Hub Investor"          = "!Hub Investor",
+  "Lead Investor"             =  "Lead Investor",
+  "Co-Investor"               = "!Lead Investor"
+)
+
+make_row <- function(flag, label) {
+  if (is.na(flag)) {
+    n_inv <- tot_inv;  nd <- tot_deals;  nc <- tot_comp;  ns <- tot_succ
+  } else {
+    neg <- startsWith(flag, "!")
+    col <- sub("^!", "", flag)
+    ids <- inv_flags %>%
+      filter(if (neg) !.data[[col]] else .data[[col]]) %>%
+      pull(`Investor ID`)
+    df <- deals %>% filter(`Investor ID` %in% ids)
+    n_inv <- length(ids)
+    nd    <- nrow(df)
+    nc    <- n_distinct(df$`Company ID`)
+    ns    <- sum(df$Success, na.rm = TRUE)
+  }
+  tibble(
+    Category         = label,
+    N                = n_inv,
+    `% of Investors` = n_inv   / tot_inv   * 100,
+    `# Investments`  = nd,
+    `% Investments`  = nd      / tot_deals * 100,
+    `# Companies`    = nc,
+    `% Companies`    = nc      / tot_comp  * 100,
+    `# Successes`    = ns,
+    `% Successes`    = if (tot_succ==0) NA else ns / tot_succ * 100,
+    `Success Rate`   = if (nc      ==0) NA else ns / nc      * 100
+  )
+}
+
+fmt2 <- function(x) ifelse(is.na(x) | x==0,
+                           "–",
+                           sub("\\.?0+$","",sprintf("%.2f",round(x,2))))
+final_tbl <- imap_dfr(cats, make_row) %>%
+  mutate(across(-Category, fmt2))
+
+print(
+  xtable(
+    final_tbl,
+    caption = "Seed-stage companies by investor type (companies_seed sample)",
+    label   = "tab:seed_investor_summary",
+    digits  = 0
+  ),
+  include.rownames       = FALSE,
+  booktabs               = TRUE,
+  floating               = FALSE,
+  sanitize.text.function = identity,
+  sanitize.colnames.function = \(x) gsub("%","\\\\%", x),
+  file                   = "investor_summary.tex"
+)
+
+print(final_tbl, width = Inf)
+```
+
+
+
+
+
