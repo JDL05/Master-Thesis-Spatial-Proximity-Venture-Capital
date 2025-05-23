@@ -1,0 +1,62 @@
+\centering
+{\footnotesize
+\caption{Variable descriptions.}
+\label{tab:var_desc}
+\begin{tabular}{p{0.25\textwidth} p{0.65\textwidth}}
+\toprule
+Variable & Description \\
+\midrule
+\multicolumn{2}{c}{\tiny\textsc{OUTCOME VARIABLE}} \\
+\midrule
+Success & 1 if company exited (IPO or acquisition) or raised Series B or later. \\[0.4em]
+\addlinespace[0.5em]
+\midrule
+\multicolumn{2}{c}{\tiny\textsc{FUNDAMENTAL VARIABLES}} \\
+\midrule
+Headquarters Country & Country where the company is headquartered. \\[0.4em]
+Founding Year & Year when the company was founded. \\[0.4em]
+Number of Founders & Total count of the founding team. \\[0.4em]
+Distance to Hub & Distance (km) from HQ to nearest startup hub. \\[0.4em]
+Hub Binary & 1 if HQ is in a startup hub; else 0. \\[0.4em]
+Energy & 1 if classified in the GICS Energy sector; else 0. \\[0.4em]
+Materials & 1 if classified in the GICS Materials sector; else 0. \\[0.4em]
+Industrials & 1 if classified in the GICS Industrials sector; else 0. \\[0.4em]
+Consumer Discretionary & 1 if classified in the GICS Consumer Discretionary sector; else 0. \\[0.4em]
+Consumer Staples & 1 if classified in the GICS Consumer Staples sector; else 0. \\[0.4em]
+Health Care & 1 if classified in the GICS Health Care sector; else 0. \\[0.4em]
+Financials & 1 if classified in the GICS Financials sector; else 0. \\[0.4em]
+Information Technology & 1 if classified in the GICS Information Technology sector; else 0. \\[0.4em]
+Communication Services & 1 if classified in the GICS Communication Services sector; else 0. \\[0.4em]
+Utilities & 1 if classified in the GICS Utilities sector; else 0. \\[0.4em]
+Real Estate & 1 if classified in the GICS Real Estate sector; else 0. \\[0.4em]
+Other & 1 if classified outside the 11 GICS sectors; else 0. \\[0.4em]
+\addlinespace[0.5em]
+\midrule
+\multicolumn{2}{c}{\tiny\textsc{TREATMENT VARIABLES}} \\
+\midrule
+Number Seed Rounds & Total number of seed funding rounds completed. \\[0.4em]
+Avg Seed VC Distance & Mean distance (km) between seed investors and HQ. \\[0.4em]
+Avg Seed VC Portfolio Organizations & Average portfolio size of seed investors. \\[0.4em]
+Avg Age Seed VC & Mean years of experience among seed investors. \\[0.4em]
+Avg Exits Seed VC & Mean number of prior successful exits per seed investor. \\[0.4em]
+Number Seed VC & Count of distinct investors in seed rounds. \\[0.4em]
+Regional Seed VC Binary & 1 if at least one seed investor is local (<100 km); else 0. \\[0.4em]
+Overregional Seed VC Binary & 1 if any seed investor is from outside the region; else 0. \\[0.4em]
+Specific VC in Seed Binary & 1 if a topic-focused VC participated in seed; else 0. \\[0.4em]
+Accelerator in Seed Binary & 1 if an accelerator participated in seed; else 0. \\[0.4em]
+Angel Group in Seed Binary & 1 if an angel group participated in seed; else 0. \\[0.4em]
+Micro VC in Seed Binary & 1 if a micro-VC fund participated in seed; else 0. \\[0.4em]
+Corporate VC in Seed Binary & 1 if a corporate venture arm invested in seed; else 0. \\[0.4em]
+Number Lead Seed VC & Count of investors who led any seed round. \\[0.4em]
+Regional Lead VC in Seed Binary & 1 if a local investor led the seed round; else 0. \\[0.4em]
+Overregional Lead VC in Seed Binary & 1 if a non-local investor led the seed round; else 0. \\[0.4em]
+Specific Lead VC in Lead Seed Binary & 1 if a named topic-focused VC firm led the seed round; else 0. \\[0.4em]
+Accelerator Lead in Seed Binary & 1 if an accelerator led the seed round; else 0. \\[0.4em]
+Angel Group Lead in Seed Binary & 1 if an angel group led the seed round; else 0. \\[0.4em]
+Micro VC Lead in Seed Binary & 1 if a micro-VC led the seed round; else 0. \\[0.4em]
+Corporate VC Lead in Seed Binary & 1 if a corporate venture arm led the seed round; else 0. \\[0.4em]
+Years to Seed & Years between founding and first seed round. \\[0.4em]
+Total Seed Funding (M) & Sum of all seed investments in millions USD. \\[0.4em]
+\bottomrule
+\end{tabular}
+}

@@ -1,23 +1,45 @@
 ---
-title: "final_explanatory-data-analysis"
+title: "Explanatory Data Analysis Overleaf"
 author: "Jan Linzner"
 date: "2025-05-21"
 output: html_document
+knit:
+  root.dir: "~/Projects/Master-Thesis-Spatial-Proximity-Venture-Capital"
 ---
-```{r}
+
+# File Prep
+```{r Load Packages and Data Sets}
 library(readr)
 library(xtable)
 library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(ggplot2)
+library(scales)
+library(tibble)
+library(knitr)
+library(kableExtra)
+
 setwd("~/Projects/Master-Thesis-Spatial-Proximity-Venture-Capital")
 companies_seed <- read_csv("data/sets-for-r/companies_seed.csv")
 investors_seed <- read_csv("data/sets-for-r/investors_seed.csv")
 hubs <- read_csv("data/sets-for-r/startup_hubs.csv")
 seed_help <- read_csv("data/sets-for-r/seed_help.csv")
+rounds <- read_csv("data/sets-for-r/rounds.csv")
 ```
 
+```{r setup, include=FALSE}
+knitr::opts_knit$set(
+  root.dir = "~/Projects/Master-Thesis-Spatial-Proximity-Venture-Capital"
+)
+```
+
+
+# Tables
 ## Companies - Overall
 
-```{r}
+```{r Companies Seed Summary}
 make_summary <- function(data, group_name) {
   data %>%
     summarise(
@@ -59,11 +81,9 @@ summary_tbl <- summary_tbl %>%
   rename(
     N                         = n,
     `Avg Seed Rounds`         = Avg_Seed_Rounds,
-    `Avg Seed Investors`      = Avg_Seed_Investors,
-    `Avg Lead Seed Investors` = Avg_Seed_Lead_Investors,
+    `Avg Seed VC`      = Avg_Seed_Investors,
+    `Avg Lead Seed VC` = Avg_Seed_Lead_Investors,
     `Avg VC Dist. (km)`       = Avg_Seed_Investor_Dist_km,
-    `% in Hubs`               = Pct_in_Hubs,
-    `Avg Hub Dist. (km)`      = Avg_Hub_Dist_km,
     `Avg # Founders`          = Avg_Num_Founders,
     `Avg Years to Seed`       = Avg_Years_to_Seed,
     `% Success`               = Pct_Success
@@ -72,13 +92,12 @@ summary_tbl <- summary_tbl %>%
 formatted <- summary_tbl %>%
   select(
     Country, N,
-    `Avg Seed Rounds`, `Avg Seed Investors`, `Avg Lead Seed Investors`,
+    `Avg Seed Rounds`, `Avg Seed VC`, `Avg Lead Seed VC`,
     `Avg Years to Seed`, `Avg # Founders`,
-    `Avg VC Dist. (km)`, `% in Hubs`, `Avg Hub Dist. (km)`,
-    `Number of Hubs`, `% Success`
+    `Avg VC Dist. (km)`, `% Success`
   ) %>%
   mutate(across(where(is.numeric), ~ sprintf("%.2f", .))) %>%
-  mutate(across(c(N, `Number of Hubs`), as.character))
+  mutate(across(c(N), as.character))
 
 others_tbl <- formatted %>% filter(Country != "Europe")
 europe_tbl <- formatted %>% filter(Country == "Europe")
@@ -91,7 +110,6 @@ final_tbl_clean <- bind_rows(others_tbl, europe_bold)
 print(
   xtable(
     final_tbl_clean,
-    caption = "Summary of Seed-stage Companies by Country",
     label   = "tab:seed_summary_clean",
     digits  = rep(0, ncol(final_tbl_clean) + 1)
   ),
@@ -102,13 +120,13 @@ print(
   sanitize.colnames.function = function(x) {
     x %>% gsub("%","\\\\%",.) %>% gsub("#","\\\\#",.)
   },
-  file                       = "table_seed_summary_clean.tex"
+  file                       = "R-files/tables/table_companies-general_europe.tex"
 )
 
 print(final_tbl_clean, width = Inf)
 ```
 ## Companies - Hubs
-```{r hub-summary, message=FALSE, warning=FALSE}
+```{r Companies - Hub Summary, message=FALSE, warning=FALSE}
 company_counts <- companies_seed |>
   count(`Headquarters Country`, name = "N")
 
@@ -224,7 +242,7 @@ print(
     digits  = rep(0, ncol(hub_tbl_final) + 1)
   ),
   type         = "latex",
-  file         = "table_hub_summary.tex",
+  file         = "R-files/tables/table_hub-europe.tex",
   include.rownames = FALSE,
   booktabs     = TRUE,
   floating     = FALSE,
@@ -234,7 +252,8 @@ print(
 
 hub_tbl_final  
 ```
-```{r seed-investor-summary, message=FALSE, warning=FALSE}
+## Companies - Seed Funding by Country/Investor
+```{r Seed-Investor Summary, message=FALSE, warning=FALSE}
 fmt2 <- function(x){
   ifelse(is.na(x),
          "–",
@@ -312,7 +331,7 @@ print(
   floating                   = FALSE,
   sanitize.text.function     = identity,
   sanitize.colnames.function = \(x) gsub("%", "\\\\%", x),
-  file                       = "table_seed_investor_summary.tex"
+  file                       = "R-files/tables/table_seed_investor-europe.tex"
 )
 
 final_tbl      
@@ -320,7 +339,7 @@ final_tbl
 
 ## Investors - General
 
-```{r}
+```{r Investors Classes Investment Behaviour}
 deals <- seed_help %>%
   semi_join(companies_seed, by = "Company ID") %>%                  
   inner_join(investors_seed %>% select(`Investor ID`),               
@@ -411,13 +430,657 @@ print(
   floating               = FALSE,
   sanitize.text.function = identity,
   sanitize.colnames.function = \(x) gsub("%","\\\\%", x),
-  file                   = "investor_summary.tex"
+  file                   = "R-files/tables/table_investor_classification.tex"
 )
 
 print(final_tbl, width = Inf)
 ```
 
+## Funding - by Company Founding Year
+```{r Funding by Year}
+funding_per_company <- rounds %>%
+  filter(!is.na(`Money Raised (in USD)`), `Money Raised (in USD)` > 0) %>%
+  inner_join(
+    companies_seed %>% select(`Organization Name URL`, `Company ID`, `Founded Year`),
+    by = "Organization Name URL"
+  ) %>%
+  group_by(`Company ID`, Founded_Year = `Founded Year`) %>%
+  summarise(
+    n_rounds      = n(),
+    total_funding = sum(`Money Raised (in USD)`, na.rm = TRUE),
+    .groups       = "drop"
+  ) %>%
+  filter(total_funding > 0)
+
+cohort_stats <- funding_per_company %>%
+  group_by(Founded_Year) %>%
+  summarise(
+    N                   = n_distinct(`Company ID`),
+    Avg_Funding_Rounds  = mean(n_rounds,        na.rm = TRUE),
+    Mean_Funding        = mean(total_funding,   na.rm = TRUE),
+    SD_Funding          = sd(total_funding,     na.rm = TRUE),
+    Max_Funding         = max(total_funding,    na.rm = TRUE),
+    Min_Funding         = min(total_funding,    na.rm = TRUE),
+    .groups            = "drop"
+  ) %>%
+  mutate(Founded_Year = as.character(Founded_Year))
+
+overall_stats <- funding_per_company %>%
+  summarise(
+    Founded_Year        = "Overall",
+    N                   = n_distinct(`Company ID`),
+    Avg_Funding_Rounds  = mean(n_rounds,        na.rm = TRUE),
+    Mean_Funding        = mean(total_funding,   na.rm = TRUE),
+    SD_Funding          = sd(total_funding,     na.rm = TRUE),
+    Max_Funding         = max(total_funding,    na.rm = TRUE),
+    Min_Funding         = min(total_funding,    na.rm = TRUE)
+  )
+
+funding_summary <- bind_rows(cohort_stats, overall_stats) %>%
+  mutate(
+    across(
+      c(Mean_Funding, SD_Funding, Max_Funding, Min_Funding),
+      ~ round(.x / 1e6, 2)
+    ),
+    Founded_Year = factor(
+      Founded_Year,
+      levels = c(sort(unique(cohort_stats$Founded_Year)), "Overall")
+    )
+  ) %>%
+  arrange(Founded_Year)
+
+funding_tbl_fmt <- funding_summary %>%
+  rename(
+    `Founding Year`    = Founded_Year,
+    `# Companies (N)`  = N,
+    `Avg # Rounds`     = Avg_Funding_Rounds,
+    `Mean Funding (M)` = Mean_Funding,
+    `SD Funding (M)`   = SD_Funding,
+    `Max Funding (M)`  = Max_Funding,
+    `Min Funding (M)`  = Min_Funding
+  ) %>%
+  mutate(across(-`Founding Year`, ~ sprintf("%.2f", as.numeric(.))))
+
+print(
+  xtable(
+    funding_tbl_fmt,
+    caption = "Lifetime Seed Funding by Founding Cohort",
+    label   = "tab:funding_by_founding_year",
+    align   = c("l","c", rep("S[table-format=4.2]", ncol(funding_tbl_fmt)-1)),
+    digits  = 0
+  ),
+  file                   = "R-files/tables/table_funding-by-year.tex",
+  include.rownames       = FALSE,
+  booktabs               = TRUE,
+  floating               = FALSE,
+  sanitize.text.function = identity,
+  sanitize.colnames.function = identity
+)
+
+print(funding_tbl_fmt, n = Inf)
+```
+
+# Visualizations
+## Companies
+### Success by Year
+```{r Success by Year}
+warm_cols <- c("No Success" = "#E69F00", "Success" = "#D55E00")
+shared_theme <- theme_minimal(base_size = 14) +
+  theme(
+    plot.title         = element_text(face = "bold", size = 16, hjust = 0.5),
+    axis.title         = element_text(size = 13),
+    axis.text.x        = element_text(size = 8),
+    axis.text.y        = element_text(size = 8),
+    legend.position    = "top",
+    legend.title       = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor   = element_blank(),
+    plot.margin        = margin(10, 20, 10, 10)
+  )
+
+yearly_counts_cs <- companies_seed %>%
+  mutate(
+    Year   = year(`Founded Date`),
+    Status = if_else(Success, "Success", "No Success")
+  ) %>%
+  group_by(Year, Status) %>%
+  summarise(
+    Companies = n(),       
+    .groups   = "drop"
+  ) %>%
+  complete(Year, Status, fill = list(Companies = 0)) %>%
+  mutate(Status = factor(Status, levels = c("No Success", "Success")))
+
+ggplot(yearly_counts_cs, aes(x = factor(Year), y = Companies, fill = Status)) +
+  geom_col(width = 0.7) +
+  scale_fill_manual(values = warm_cols) +
+  scale_y_continuous(expand = expansion(mult = c(0, .05))) +
+  labs(
+    title = "Seed-stage Companies by Year and Outcome",
+    x     = "Year Founded",
+    y     = "Number of Companies",
+    fill  = NULL
+  ) +
+  shared_theme
+```
+
+## Investors
+### Success by Investor Class
+```{r Success by Investor Type}
+plot_tbl <- final_tbl %>%
+  mutate(
+    pct_companies = as.numeric(`% Companies`),
+    pct_success   = as.numeric(`% Successes`),
+    success_rate  = as.numeric(`Success Rate`)
+  )
+
+warm_cols <- c("Companies" = "#E69F00", "Successes" = "#D55E00")
+point_col <- "#CC3311"
+
+shared_theme <- theme_minimal(base_size = 14) +
+  theme(
+    plot.title         = element_text(face = "bold", size = 16, hjust = 0.5),
+    axis.title         = element_text(size = 13),
+    axis.text.x        = element_text(size = 8),    
+    axis.text.y        = element_text(size = 8),    
+    legend.position    = "top",
+    legend.title       = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor   = element_blank(),
+    plot.margin        = margin(10, 20, 10, 10)
+  )
 
 
+stacked_data <- plot_tbl %>%
+  rowwise() %>%
+  mutate(
+    tot        = pct_companies + pct_success,
+    comp_share = pct_companies / tot * 100,
+    succ_share = pct_success  / tot * 100
+  ) %>%
+  ungroup() %>%
+  select(Category, comp_share, succ_share) %>%
+  pivot_longer(
+    cols      = c(comp_share, succ_share),
+    names_to  = "segment",
+    values_to = "pct"
+  ) %>%
+  mutate(
+    segment  = recode(segment,
+                      comp_share = "Companies",
+                      succ_share = "Successes"),
+    Category = fct_reorder(Category, pct, .fun = max)
+  )
 
+# ── Plot 1: 100% Stacked Bar ────────────────────────────────────────────────
+ggplot(stacked_data, aes(x = Category, y = pct, fill = segment)) +
+  geom_col(width = 0.7) +
+  coord_flip() +
+  scale_y_continuous(
+    labels = percent_format(scale = 1),
+    expand = expansion(mult = c(0, .10))  
+  ) +
+  scale_fill_manual(values = warm_cols) +
+  labs(
+    title = "Portfolio Composition: Companies vs Success",
+    x     = NULL,
+    y     = "Share within type (100%)"
+  ) +
+  shared_theme
+
+# ── Plot 2: Horizontal Lollipop ────────────────────────────────────────────
+ggplot(plot_tbl %>% arrange(success_rate),
+       aes(x = success_rate,
+           y = fct_reorder(Category, success_rate))) +
+  geom_segment(aes(x = 0, xend = success_rate, y = Category, yend = Category),
+               color = "gray80", size = 0.5) +
+  geom_point(color = point_col, size = 4) +
+  scale_x_continuous(
+    labels = function(x) sprintf("%.0f%%", x),
+    expand = expansion(mult = c(0, .10))   
+  ) +
+  labs(
+    title = "Success Rate by Investor Type",
+    x     = "Success Rate (%)",
+    y     = NULL
+  ) +
+  shared_theme
+```
+# Description
+## Company Variable
+
+```{r Company Variable Description Table}
+vars <- tribble(
+  ~group,                     ~var,                                    ~desc,
+
+  "Outcome Variable",        "Success",                               "1 if company exited (IPO or acquisition) or raised Series B or later.",
+
+  # Fundamental variables ---> pre-existing, no treatment effect
+  "Fundamental Variables",   "Headquarters Country",                  "Country where the company is headquartered.",
+  "Fundamental Variables",   "Founding Year",                         "Year when the company was founded.",
+  "Fundamental Variables",   "Number of Founders",                    "Total count of the founding team.",
+  "Fundamental Variables",   "Distance to Hub",                       "Distance (km) from HQ to nearest startup hub.",
+  "Fundamental Variables",   "Hub Binary",                            "1 if HQ is in a startup hub; else 0.",
+
+  # --- here come the 11 GICS‐head sectors + Other
+  "Fundamental Variables",   "Energy",                                "1 if classified in the GICS Energy sector; else 0.",
+  "Fundamental Variables",   "Materials",                             "1 if classified in the GICS Materials sector; else 0.",
+  "Fundamental Variables",   "Industrials",                           "1 if classified in the GICS Industrials sector; else 0.",
+  "Fundamental Variables",   "Consumer Discretionary",                "1 if classified in the GICS Consumer Discretionary sector; else 0.",
+  "Fundamental Variables",   "Consumer Staples",                      "1 if classified in the GICS Consumer Staples sector; else 0.",
+  "Fundamental Variables",   "Health Care",                           "1 if classified in the GICS Health Care sector; else 0.",
+  "Fundamental Variables",   "Financials",                            "1 if classified in the GICS Financials sector; else 0.",
+  "Fundamental Variables",   "Information Technology",                "1 if classified in the GICS Information Technology sector; else 0.",
+  "Fundamental Variables",   "Communication Services",                "1 if classified in the GICS Communication Services sector; else 0.",
+  "Fundamental Variables",   "Utilities",                             "1 if classified in the GICS Utilities sector; else 0.",
+  "Fundamental Variables",   "Real Estate",                           "1 if classified in the GICS Real Estate sector; else 0.",
+  "Fundamental Variables",   "Other",                                 "1 if classified outside the 11 GICS sectors; else 0.",
+
+  # Treatment (investor & funding) variables ---> treatment
+  "Treatment Variables",  "Number Seed Rounds",                    "Total number of seed funding rounds completed.",
+  "Treatment Variables",  "Avg Seed VC Distance",                  "Mean distance (km) between seed investors and HQ.",
+  "Treatment Variables",  "Avg Seed VC Portfolio Organizations",    "Average portfolio size of seed investors.",
+  "Treatment Variables",  "Avg Age Seed VC",                       "Mean years of experience among seed investors.",
+  "Treatment Variables",  "Avg Exits Seed VC",                     "Mean number of prior successful exits per seed investor.",
+  "Treatment Variables",  "Number Seed VC",                        "Count of distinct investors in seed rounds.",
+  "Treatment Variables",  "Regional Seed VC Binary",               "1 if at least one seed investor is local (<100 km); else 0.",
+  "Treatment Variables",  "Overregional Seed VC Binary",           "1 if any seed investor is from outside the region; else 0.",
+  "Treatment Variables",  "Specific VC in Seed Binary",            "1 if a topic-focused VC participated in seed; else 0.",
+  "Treatment Variables",  "Accelerator in Seed Binary",            "1 if an accelerator participated in seed; else 0.",
+  "Treatment Variables",  "Angel Group in Seed Binary",            "1 if an angel group participated in seed; else 0.",
+  "Treatment Variables",  "Micro VC in Seed Binary",               "1 if a micro-VC fund participated in seed; else 0.",
+  "Treatment Variables",  "Corporate VC in Seed Binary",           "1 if a corporate venture arm invested in seed; else 0.",
+  "Treatment Variables",  "Number Lead Seed VC",                   "Count of investors who led any seed round.",
+  "Treatment Variables",  "Regional Lead VC in Seed Binary",       "1 if a local investor led the seed round; else 0.",
+  "Treatment Variables",  "Overregional Lead VC in Seed Binary",    "1 if a non-local investor led the seed round; else 0.",
+  "Treatment Variables",  "Specific Lead VC in Lead Seed Binary",   "1 if a named topic-focused VC firm led the seed round; else 0.",
+  "Treatment Variables",  "Accelerator Lead in Seed Binary",        "1 if an accelerator led the seed round; else 0.",
+  "Treatment Variables",  "Angel Group Lead in Seed Binary",        "1 if an angel group led the seed round; else 0.",
+  "Treatment Variables",  "Micro VC Lead in Seed Binary",           "1 if a micro-VC led the seed round; else 0.",
+  "Treatment Variables",  "Corporate VC Lead in Seed Binary",       "1 if a corporate venture arm led the seed round; else 0.",
+  "Treatment Variables",  "Years to Seed",                          "Years between founding and first seed round.",
+  "Treatment Variables",  "Total Seed Funding (M)",                 "Sum of all seed investments in millions USD."
+)
+
+lines <- character()
+
+lines <- c(lines, "\\centering")
+lines <- c(lines, "{\\footnotesize")           
+lines <- c(lines, "\\caption{Variable descriptions.}")
+lines <- c(lines, "\\label{tab:var_desc}")
+lines <- c(lines, "\\begin{tabular}{p{0.25\\textwidth} p{0.65\\textwidth}}")
+lines <- c(lines, "\\toprule")
+lines <- c(lines, "Variable & Description \\\\")
+
+current_group <- NULL
+
+for (i in seq_len(nrow(vars))) {
+  row <- vars[i, ]
+  grp <- row$group
+
+  if (is.null(current_group) || grp != current_group) {
+    if (!is.null(current_group)) lines <- c(lines, "\\addlinespace[0.5em]")
+    lines <- c(lines,
+      "\\midrule",
+      sprintf("\\multicolumn{2}{c}{\\tiny\\textsc{%s}} \\\\", toupper(grp)),
+      "\\midrule"
+    )
+    current_group <- grp
+  }
+
+  lines <- c(lines,
+    sprintf("%s & %s \\\\[0.4em]", row$var, row$desc)
+  )
+}
+
+lines <- c(lines, "\\bottomrule")
+lines <- c(lines, "\\end{tabular}")
+lines <- c(lines, "}")                           
+
+# 3. Write out to disk
+writeLines(lines, "R-files/tables/table_variable_descriptions.tex")
+```
+
+
+## Company Features Comparison: Overall - Success - No Success
+
+```{r Company Features EDA Success/No Success}
+vars <- c(
+  "Success",
+  "Number of Founders",
+  "Distance to Hub",
+  "Hub Binary",
+  "Number Seed Rounds",
+  "Avg Seed Investor Distance",
+  "Average Seed Investors Portfolio Organizations",
+  "Number Seed Investors",
+  "Regional Seed Investor Binary",
+  "Overregional Seed Investor Binary",
+  "Number Lead Seed Investors",
+  "Regional Lead Seed Investor Binary",
+  "Overregional Lead Seed Investor Binary",
+  "Avg Age of Seed Investors",
+  "Avg Exits of Seed Investors",
+  "Specific VC in Seed Binary",
+  "Specific Lead VC in Seed Binary",
+  "Accelerator Funding Binary",
+  "Angel Group Funding Binary",
+  "Micro VC Funding Binary",
+  "Corporate Venture Capital Funding Binary",
+  "Accelerator Lead Funding Binary",
+  "Angel Group Lead Funding Binary",
+  "Micro VC Lead Funding Binary",
+  "Corporate Venture Capital Lead Funding Binary",
+  "Years to Seed",
+  "Total Seed Funding (M)",
+  "Energy",
+  "Materials",
+  "Industrials",
+  "Consumer Discretionary",
+  "Consumer Staples",
+  "Health Care",
+  "Financials",
+  "Information Technology",
+  "Communication Services",
+  "Utilities",
+  "Real Estate",
+  "Other"
+)
+
+
+df_long_full <- companies_seed %>%
+  mutate(SuccessGroup = ifelse(Success == 1, "Successful", "Non-successful")) %>%
+  select(SuccessGroup, all_of(vars)) %>%
+  pivot_longer(-SuccessGroup, names_to="Variable", values_to="Value")
+
+
+df_long_founders <- companies_seed %>%
+  filter(!is.na(`Number of Founders`) & `Number of Founders` > 0) %>%
+  mutate(SuccessGroup = ifelse(Success == 1, "Successful", "Non-successful")) %>%
+  select(SuccessGroup, `Number of Founders`) %>%
+  pivot_longer(-SuccessGroup, names_to="Variable", values_to="Value")
+
+df_long_seed <- companies_seed %>%
+  filter(!is.na(`Total Seed Funding (M)`) & `Total Seed Funding (M)` > 0) %>%
+  mutate(SuccessGroup = ifelse(Success == 1, "Successful", "Non-successful")) %>%
+  select(SuccessGroup, `Total Seed Funding (M)`) %>%
+  pivot_longer(-SuccessGroup, names_to="Variable", values_to="Value")
+
+desc_overall_full <- df_long_full %>%
+  group_by(Variable) %>%
+  summarise(
+    Overall_N    = sum(!is.na(Value)),
+    Overall_Mean = mean(Value, na.rm=TRUE),
+    Overall_SD   = sd(Value,   na.rm=TRUE),
+    .groups="drop"
+  )
+
+desc_overall_founders <- df_long_founders %>%
+  group_by(Variable) %>%
+  summarise(
+    Overall_N    = sum(!is.na(Value)),
+    Overall_Mean = mean(Value, na.rm=TRUE),
+    Overall_SD   = sd(Value,   na.rm=TRUE),
+    .groups="drop"
+  )
+
+desc_overall_seed <- df_long_seed %>%
+  group_by(Variable) %>%
+  summarise(
+    Overall_N    = sum(!is.na(Value)),
+    Overall_Mean = mean(Value, na.rm=TRUE),
+    Overall_SD   = sd(Value,   na.rm=TRUE),
+    .groups="drop"
+  )
+
+desc_overall <- desc_overall_full %>%
+  rows_update(desc_overall_founders, by="Variable") %>%
+  rows_update(desc_overall_seed,     by="Variable")
+
+desc_by_succ_full <- df_long_full %>%
+  group_by(Variable, SuccessGroup) %>%
+  summarise(
+    N    = sum(!is.na(Value)),
+    Mean = mean(Value, na.rm=TRUE),
+    SD   = sd(Value,   na.rm=TRUE),
+    .groups="drop"
+  ) %>%
+  pivot_wider(
+    names_from  = SuccessGroup,
+    values_from = c(N,Mean,SD),
+    names_glue  = "{SuccessGroup}_{.value}"
+  )
+
+desc_by_succ_founders <- df_long_founders %>%
+  group_by(Variable, SuccessGroup) %>%
+  summarise(
+    N    = sum(!is.na(Value)),
+    Mean = mean(Value, na.rm=TRUE),
+    SD   = sd(Value,   na.rm=TRUE),
+    .groups="drop"
+  ) %>%
+  pivot_wider(
+    names_from  = SuccessGroup,
+    values_from = c(N,Mean,SD),
+    names_glue  = "{SuccessGroup}_{.value}"
+  )
+
+desc_by_succ_seed <- df_long_seed %>%
+  group_by(Variable, SuccessGroup) %>%
+  summarise(
+    N    = sum(!is.na(Value)),
+    Mean = mean(Value, na.rm=TRUE),
+    SD   = sd(Value,   na.rm=TRUE),
+    .groups="drop"
+  ) %>%
+  pivot_wider(
+    names_from  = SuccessGroup,
+    values_from = c(N,Mean,SD),
+    names_glue  = "{SuccessGroup}_{.value}"
+  )
+
+desc_by_succ <- desc_by_succ_full %>%
+  rows_update(desc_by_succ_founders, by="Variable") %>%
+  rows_update(desc_by_succ_seed,     by="Variable")
+
+table3 <- desc_overall %>%
+  left_join(desc_by_succ, by="Variable") %>%
+  select(
+    Variable,
+    Overall_N, Overall_Mean, Overall_SD,
+    `Non-successful_N`, `Non-successful_Mean`, `Non-successful_SD`,
+    `Successful_N`,      `Successful_Mean`,      `Successful_SD`
+  ) %>%
+  mutate(across(-Variable, ~ round(.x, 2)))
+
+order_vars <- c(
+  "Success",
+  "Number of Founders",
+  "Distance to Hub",
+  "Hub Binary",
+  "Energy",
+  "Materials",
+  "Industrials",
+  "Consumer Discretionary",
+  "Consumer Staples",
+  "Health Care",
+  "Financials",
+  "Information Technology",
+  "Communication Services",
+  "Utilities",
+  "Real Estate",
+  "Other",
+  "Number Seed Rounds",
+  "Avg Seed Investor Distance",
+  "Average Seed Investors Portfolio Organizations",
+  "Avg Age of Seed Investors",
+  "Avg Exits of Seed Investors",
+  "Number Seed Investors",
+  "Regional Seed Investor Binary",
+  "Overregional Seed Investor Binary",
+  "Specific VC in Seed Binary",
+  "Accelerator Funding Binary",
+  "Angel Group Funding Binary",
+  "Micro VC Funding Binary",
+  "Corporate Venture Capital Funding Binary",
+  "Number Lead Seed Investors",
+  "Regional Lead Seed Investor Binary",
+  "Overregional Lead Seed Investor Binary",
+  "Specific Lead VC in Seed Binary",
+  "Accelerator Lead Funding Binary",
+  "Angel Group Lead Funding Binary",
+  "Micro VC Lead Funding Binary",
+  "Corporate Venture Capital Lead Funding Binary",
+  "Years to Seed",
+  "Total Seed Funding (M)"
+)
+
+new_labels <- c(
+  "Success",
+  "Number of Founders",
+  "Distance to Hub",
+  "Hub Binary",
+  "Energy",
+  "Materials",
+  "Industrials",
+  "Consumer Discretionary",
+  "Consumer Staples",
+  "Health Care",
+  "Financials",
+  "Information Technology",
+  "Communication Services",
+  "Utilities",
+  "Real Estate",
+  "Other",
+  "Number Seed Rounds",
+  "Avg Seed VC Distance",
+  "Avg Seed VC Portfolio Organizations",
+  "Avg Age Seed VC",
+  "Avg Exits Seed VC",
+  "Number Seed VC",
+  "Regional Seed VC Binary",
+  "Overregional Seed VC Binary",
+  "Specific VC in Seed Binary",
+  "Accelerator in Seed Binary",
+  "Angel Group in Seed Binary",
+  "Micro VC in Seed Binary",
+  "Corporate VC in Seed Binary",
+  "Number Lead Seed VC",
+  "Regional Lead VC in Seed Binary",
+  "Overregional Lead VC in Seed Binary",
+  "Specific Lead VC in Seed Binary",
+  "Accelerator Lead in Seed Binary",
+  "Angel Group Lead in Seed Binary",
+  "Micro VC Lead in Seed Binary",
+  "Corporate VC Lead in Seed Binary",
+  "Years to Seed",
+  "Total Seed Funding (M)"
+)
+
+table3 <- table3 %>%
+  mutate(Variable = factor(
+    Variable,
+    levels = order_vars,
+    labels = new_labels
+  )) %>%
+  arrange(Variable) %>%
+  mutate(Variable = as.character(Variable))
+
+tex_table <- kable(
+  table3,
+  format    = "latex",
+  booktabs  = TRUE,
+  align     = c("l", rep("r", 9)),
+  col.names = c(
+    "Variable",
+    "N", "Mean", "SD",
+    "N", "Mean", "SD",
+    "N", "Mean", "SD"
+  ),
+  caption   = "Descriptive statistics (N, Mean, SD)"
+) %>%
+  add_header_above(c(
+    " "              = 1,
+    "Overall"        = 3,
+    "Non‐successful" = 3,
+    "Successful"     = 3
+  )) %>%
+  kable_styling(latex_options = c("hold_position", "scale_down"))
+
+save_kable(tex_table, file = "R-files/tables/table_eda-overall-success-no-success.tex")
+```
+
+
+## Sector Distribution
+```{r Sector Distribution}
+sector_cols <- c(
+  "Information Technology",
+  "Communication Services",
+  "Industrials",
+  "Consumer Discretionary",
+  "Health Care",
+  "Consumer Staples",
+  "Financials",
+  "Real Estate",
+  "Utilities",
+  "Energy",
+  "Materials",
+  "Other"
+)
+
+N_total <- nrow(companies_seed)
+
+table5 <- tibble(Business_sector = sector_cols) %>%
+  rowwise() %>%
+  mutate(
+    Relative_freq = sum(companies_seed[[Business_sector]], na.rm=TRUE) / N_total * 100,
+    Success_rate  = if (sum(companies_seed[[Business_sector]], na.rm=TRUE) > 0) {
+      sum(companies_seed$Success * companies_seed[[Business_sector]], na.rm=TRUE) /
+        sum(companies_seed[[Business_sector]], na.rm=TRUE) * 100
+    } else {
+      NA_real_
+    }
+  ) %>%
+  ungroup() %>%
+  arrange(desc(Relative_freq)) %>%
+  mutate(
+    Relative_freq = round(Relative_freq, 2),
+    Success_rate  = round(Success_rate, 2)
+  )
+
+table5 %>%
+  kable(
+    format    = "latex",
+    booktabs  = TRUE,
+    align     = c("l", "r", "r"),
+    col.names = c(
+      "Business sector",
+      "Relative freq. (in \\%)",
+      "Success rate (in \\%)"
+    ),
+    caption   = "Relative frequencies and success rates of startups across different business sectors.",
+    label     = "tab:table5"
+  ) %>%
+  kable_styling(latex_options = c("hold_position", "scale_down"))
+
+latex_table <- table5 %>%
+  kable(
+    format    = "latex",
+    booktabs  = TRUE,
+    align     = c("l", "r", "r"),
+    col.names = c(
+      "Business sector",
+      "Relative freq. (in \\%)",
+      "Success rate (in \\%)"
+    ),
+    caption   = "Relative frequencies and success rates of startups across different business sectors.",
+    label     = "tab:table5"
+  ) %>%
+  kable_styling(latex_options = c("hold_position", "scale_down"))
+
+print(latex_table)
+
+setwd("~/Projects/Master-Thesis-Spatial-Proximity-Venture-Capital")
+save_kable(latex_table, file = "R-files/tables/table_sector-distribution.tex")
+```
 
