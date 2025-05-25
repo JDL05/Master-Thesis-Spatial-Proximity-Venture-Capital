@@ -269,6 +269,7 @@ investor_tbl <- companies_seed %>%
     `N Specific VC`            = sum(`Specific VC in Seed Binary`,  na.rm = TRUE),
     `N Accelerator`            = sum(`Accelerator Funding Binary`,           na.rm = TRUE),
     `N CVC`                    = sum(`Corporate Venture Capital Funding Binary`, na.rm = TRUE),
+    `N Target`                    = sum(`Target VC in Seed Binary`, na.rm = TRUE),
     .groups = "drop"
   ) %>% 
   mutate(
@@ -276,7 +277,8 @@ investor_tbl <- companies_seed %>%
     `% Overregional`         = `N Overregional`         / N * 100,
     `% Specific VC`          = `N Specific VC` / N * 100,
     `% Accelerator`          = `N Accelerator`          / N * 100,
-    `% CVC`                  = `N CVC`                  / N * 100
+    `% CVC`                  = `N CVC`                  / N * 100,
+        `% Target`                  = `N Target`                  / N * 100,
   )
 
 investor_tbl_fmt <- investor_tbl %>% 
@@ -294,14 +296,16 @@ eu_row <- investor_tbl %>%
     `N Overregional`           = sum(`N Overregional`),
     `N Specific VC`            = sum(`N Specific VC`),
     `N Accelerator`            = sum(`N Accelerator`),
-    `N CVC`                    = sum(`N CVC`)
+    `N CVC`                    = sum(`N CVC`),
+      `N Target`                    = sum(`N Target`)
   ) %>% 
   mutate(
     `% Regional`             = `N Regional`             / N * 100,
     `% Overregional`         = `N Overregional`         / N * 100,
     `% Specific VC` = `N Specific VC` / N * 100,
     `% Accelerator`          = `N Accelerator`          / N * 100,
-    `% CVC`                  = `N CVC`                  / N * 100
+    `% CVC`                  = `N CVC`                  / N * 100,
+        `% Target`                  = `N Target`                  / N * 100
   ) %>% 
   mutate(
     across(starts_with("N"), as.character),
@@ -316,7 +320,8 @@ final_tbl <- bind_rows(investor_tbl_fmt, eu_row) %>%
     `N Overregional`, `% Overregional`,
     `N Specific VC`, `% Specific VC`,
     `N Accelerator`, `% Accelerator`,
-    `N CVC`, `% CVC`
+    `N CVC`, `% CVC`,
+    `N Target`, `% Target`,
   )
 
 print(
@@ -360,9 +365,10 @@ inv_flags <- investors_seed %>%
   select(`Investor ID`,
          `Local Investor`,
          `Specific VC Binary`,
-         Accelerator,
+         `Accelerator`,
          `Corporate Venture Capital`,
          `Micro VC`,
+         `Target VC`,
          `Hub Investor`,
          `Lead Investor`) %>%
   mutate(across(-`Investor ID`, ~ replace_na(.x, FALSE))) %>%
@@ -379,6 +385,8 @@ cats <- c(
   "Micro VC"                  =  "Micro VC",
   "Hub Investor"              =  "Hub Investor",
   "Non-Hub Investor"          = "!Hub Investor",
+  "Target VC"                 = "Target VC",
+  "Non-Target VC"             = "!Target VC",
   "Lead Investor"             =  "Lead Investor",
   "Co-Investor"               = "!Lead Investor"
 )
@@ -653,7 +661,9 @@ ggplot(plot_tbl %>% arrange(success_rate),
 vars <- tribble(
   ~group,                     ~var,                                    ~desc,
 
-  "Outcome Variable",        "Success",                               "1 if company exited (IPO or acquisition) or raised Series B or later.",
+  "Outcome Variable",        "Success",                               "1 if company exited (IPO or acquisition) or raised more than 20,000,000 USD of Equity Funding.",
+  "Outcome Variable", "Exit", "1 if company is flagged as an Exit Case.",
+  "Outcome Variable", "Funding Success", "1 if company raised more than 20,000,000 USD of Equity Funding",
 
   # Fundamental variables ---> pre-existing, no treatment effect
   "Fundamental Variables",   "Headquarters Country",                  "Country where the company is headquartered.",
@@ -661,6 +671,7 @@ vars <- tribble(
   "Fundamental Variables",   "Number of Founders",                    "Total count of the founding team.",
   "Fundamental Variables",   "Distance to Hub",                       "Distance (km) from HQ to nearest startup hub.",
   "Fundamental Variables",   "Hub Binary",                            "1 if HQ is in a startup hub; else 0.",
+  "Fundamental Variables",   "B2B Binary",                            "1 if startup is focussing business customers; else 0.",
 
   # --- here come the 11 GICS‐head sectors + Other
   "Fundamental Variables",   "Energy",                                "1 if classified in the GICS Energy sector; else 0.",
@@ -690,6 +701,7 @@ vars <- tribble(
   "Treatment Variables",  "Angel Group in Seed Binary",            "1 if an angel group participated in seed; else 0.",
   "Treatment Variables",  "Micro VC in Seed Binary",               "1 if a micro-VC fund participated in seed; else 0.",
   "Treatment Variables",  "Corporate VC in Seed Binary",           "1 if a corporate venture arm invested in seed; else 0.",
+  "Treatment Variables",  "Target VC in Seed Binary",               "1 if a target VC invested in seed, else 0.",
   "Treatment Variables",  "Number Lead Seed VC",                   "Count of investors who led any seed round.",
   "Treatment Variables",  "Regional Lead VC in Seed Binary",       "1 if a local investor led the seed round; else 0.",
   "Treatment Variables",  "Overregional Lead VC in Seed Binary",    "1 if a non-local investor led the seed round; else 0.",
@@ -698,6 +710,7 @@ vars <- tribble(
   "Treatment Variables",  "Angel Group Lead in Seed Binary",        "1 if an angel group led the seed round; else 0.",
   "Treatment Variables",  "Micro VC Lead in Seed Binary",           "1 if a micro-VC led the seed round; else 0.",
   "Treatment Variables",  "Corporate VC Lead in Seed Binary",       "1 if a corporate venture arm led the seed round; else 0.",
+  "Treatment Variables",  "Target VC Lead in Seed Binary",          "1 if a target VC led the seed round, else 0.",
   "Treatment Variables",  "Years to Seed",                          "Years between founding and first seed round.",
   "Treatment Variables",  "Total Seed Funding (M)",                 "Sum of all seed investments in millions USD."
 )
@@ -747,9 +760,12 @@ writeLines(lines, "R-files/tables/table_variable_descriptions.tex")
 ```{r Company Features EDA Success/No Success}
 vars <- c(
   "Success",
+  "Exit Binary",
+  "Funding Success",
   "Number of Founders",
   "Distance to Hub",
   "Hub Binary",
+  "B2B Binary",
   "Number Seed Rounds",
   "Avg Seed Investor Distance",
   "Average Seed Investors Portfolio Organizations",
@@ -763,6 +779,8 @@ vars <- c(
   "Avg Exits of Seed Investors",
   "Specific VC in Seed Binary",
   "Specific Lead VC in Seed Binary",
+  "Target VC in Seed Binary",
+  "Target Lead VC in Seed Binary",
   "Accelerator Funding Binary",
   "Angel Group Funding Binary",
   "Micro VC Funding Binary",
@@ -786,7 +804,6 @@ vars <- c(
   "Real Estate",
   "Other"
 )
-
 
 df_long_full <- companies_seed %>%
   mutate(SuccessGroup = ifelse(Success == 1, "Successful", "Non-successful")) %>%
@@ -895,9 +912,12 @@ table3 <- desc_overall %>%
 
 order_vars <- c(
   "Success",
+  "Exit Binary",
+  "Funding Success",
   "Number of Founders",
   "Distance to Hub",
   "Hub Binary",
+  "B2B Binary",
   "Energy",
   "Materials",
   "Industrials",
@@ -910,6 +930,8 @@ order_vars <- c(
   "Utilities",
   "Real Estate",
   "Other",
+  "Years to Seed",
+  "Total Seed Funding (M)",
   "Number Seed Rounds",
   "Avg Seed Investor Distance",
   "Average Seed Investors Portfolio Organizations",
@@ -923,6 +945,7 @@ order_vars <- c(
   "Angel Group Funding Binary",
   "Micro VC Funding Binary",
   "Corporate Venture Capital Funding Binary",
+  "Target VC in Seed Binary",
   "Number Lead Seed Investors",
   "Regional Lead Seed Investor Binary",
   "Overregional Lead Seed Investor Binary",
@@ -931,15 +954,17 @@ order_vars <- c(
   "Angel Group Lead Funding Binary",
   "Micro VC Lead Funding Binary",
   "Corporate Venture Capital Lead Funding Binary",
-  "Years to Seed",
-  "Total Seed Funding (M)"
+  "Target Lead VC in Seed Binary"
 )
 
 new_labels <- c(
   "Success",
+  "Exit",
+  "Funding Success",
   "Number of Founders",
   "Distance to Hub",
   "Hub Binary",
+  "B2B Binary",
   "Energy",
   "Materials",
   "Industrials",
@@ -952,6 +977,8 @@ new_labels <- c(
   "Utilities",
   "Real Estate",
   "Other",
+  "Years to Seed",
+  "Total Seed Funding (M)",
   "Number Seed Rounds",
   "Avg Seed VC Distance",
   "Avg Seed VC Portfolio Organizations",
@@ -965,6 +992,7 @@ new_labels <- c(
   "Angel Group in Seed Binary",
   "Micro VC in Seed Binary",
   "Corporate VC in Seed Binary",
+  "Target VC in Seed Binary",
   "Number Lead Seed VC",
   "Regional Lead VC in Seed Binary",
   "Overregional Lead VC in Seed Binary",
@@ -973,8 +1001,7 @@ new_labels <- c(
   "Angel Group Lead in Seed Binary",
   "Micro VC Lead in Seed Binary",
   "Corporate VC Lead in Seed Binary",
-  "Years to Seed",
-  "Total Seed Funding (M)"
+  "Target VC Lead in Seed Binary"
 )
 
 table3 <- table3 %>%
@@ -1008,6 +1035,292 @@ tex_table <- kable(
   kable_styling(latex_options = c("hold_position", "scale_down"))
 
 save_kable(tex_table, file = "R-files/tables/table_eda-overall-success-no-success.tex")
+```
+
+## Company Description: Overall - B2B  - B2C
+```{r B2B vs B2C}
+
+# 1) pivot into long form, with your new B2BGroup
+df_long_b2b <- companies_seed %>%
+  mutate(
+    B2BGroup = ifelse(`B2B Binary` == 1, "B2B", "B2C")
+  ) %>%
+  select(B2BGroup, all_of(vars)) %>%
+  pivot_longer(-B2BGroup, names_to = "Variable", values_to = "Value")
+
+# 2) overall summaries
+desc_overall <- df_long_b2b %>%
+  group_by(Variable) %>%
+  summarise(
+    Overall_N    = sum(!is.na(Value)),
+    Overall_Mean = mean(Value, na.rm = TRUE),
+    Overall_SD   = sd(Value,   na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# 3) by-group summaries (B2B vs B2C)
+desc_by_b2b <- df_long_b2b %>%
+  group_by(Variable, B2BGroup) %>%
+  summarise(
+    N    = sum(!is.na(Value)),
+    Mean = mean(Value, na.rm = TRUE),
+    SD   = sd(Value,   na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from  = B2BGroup,
+    values_from = c(N, Mean, SD),
+    names_glue  = "{B2BGroup}_{.value}"
+  )
+
+# 4) join into final table
+table3_b2b <- desc_overall %>%
+  left_join(desc_by_b2b, by = "Variable") %>%
+  select(
+    Variable,
+    Overall_N,    Overall_Mean,    Overall_SD,
+    B2B_N,        B2B_Mean,        B2B_SD,
+    B2C_N,        B2C_Mean,        B2C_SD
+  ) %>%
+  mutate(across(-Variable, ~ round(.x, 2)))
+
+# 5) apply your ordering & relabeling
+table3_b2b <- table3_b2b %>%
+  mutate(Variable = factor(
+    Variable,
+    levels = order_vars,
+    labels = new_labels
+  )) %>%
+  arrange(Variable) %>%
+  mutate(Variable = as.character(Variable))
+
+# 6) kableExtra pipeline
+tex_table_b2b <- table3_b2b %>%
+  kable(
+    format    = "latex",
+    booktabs  = TRUE,
+    align     = c("l", rep("r", 9)),
+    col.names = c(
+      "Variable",
+      "N", "Mean", "SD",
+      "N", "Mean", "SD",
+      "N", "Mean", "SD"
+    ),
+    caption   = "Descriptive statistics (N, Mean, SD)",
+    escape    = FALSE
+  ) %>%
+  add_header_above(c(
+    " "   = 1,
+    "Overall" = 3,
+    "B2B"     = 3,
+    "B2C"     = 3
+  ), escape = FALSE) %>%
+  kable_styling(
+    position      = "center",
+    latex_options = c("hold_position", "scale_down"),
+    font_size     = 7
+  )
+
+# 7) wrap in footnotesize + centering and save
+full_tex_b2b <- paste0(
+  "{\\footnotesize\n",
+  "\\centering\n",
+  tex_table_b2b,
+  "\n}\n"
+)
+cat(full_tex_b2b, file = "R-files/tables/table_eda-overall-b2b-b2c.tex")
+```
+
+## Company Description: Hub vs No Hub
+```{r Hub vs No Hub}
+# 1) pivot into long form, with your new HubGroup
+df_long_hub <- companies_seed %>%
+  mutate(
+    HubGroup = ifelse(`Hub Binary` == 1, "Hub", "No‐Hub")
+  ) %>%
+  select(HubGroup, all_of(vars)) %>%
+  pivot_longer(-HubGroup, names_to = "Variable", values_to = "Value")
+
+# 2) overall summaries
+desc_overall <- df_long_hub %>%
+  group_by(Variable) %>%
+  summarise(
+    Overall_N    = sum(!is.na(Value)),
+    Overall_Mean = mean(Value, na.rm = TRUE),
+    Overall_SD   = sd(Value,   na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# 3) by‐group summaries (Hub vs No‐Hub)
+desc_by_hub <- df_long_hub %>%
+  group_by(Variable, HubGroup) %>%
+  summarise(
+    N    = sum(!is.na(Value)),
+    Mean = mean(Value, na.rm = TRUE),
+    SD   = sd(Value,   na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from  = HubGroup,
+    values_from = c(N, Mean, SD),
+    names_glue  = "{HubGroup}_{.value}"
+  )
+
+# 4) join into final table
+table3_hub <- desc_overall %>%
+  left_join(desc_by_hub, by = "Variable") %>%
+  select(
+    Variable,
+    Overall_N,    Overall_Mean,    Overall_SD,
+    Hub_N,        Hub_Mean,        Hub_SD,
+    `No‐Hub_N`,   `No‐Hub_Mean`,   `No‐Hub_SD`
+  ) %>%
+  mutate(across(-Variable, ~ round(.x, 2)))
+
+# 5) apply your ordering & relabeling
+table3_hub <- table3_hub %>%
+  mutate(Variable = factor(
+    Variable,
+    levels = order_vars,
+    labels = new_labels
+  )) %>%
+  arrange(Variable) %>%
+  mutate(Variable = as.character(Variable))
+
+# 6) kableExtra pipeline
+tex_table_hub <- table3_hub %>%
+  kable(
+    format    = "latex",
+    booktabs  = TRUE,
+    align     = c("l", rep("r", 9)),
+    col.names = c(
+      "Variable",
+      "N", "Mean", "SD",
+      "N", "Mean", "SD",
+      "N", "Mean", "SD"
+    ),
+    caption   = "Descriptive statistics (N, Mean, SD)",
+    escape    = FALSE
+  ) %>%
+  add_header_above(c(
+    " "      = 1,
+    "Overall" = 3,
+    "Hub"     = 3,
+    "No‐Hub"  = 3
+  ), escape = FALSE) %>%
+  kable_styling(
+    position      = "center",
+    latex_options = c("hold_position", "scale_down"),
+    font_size     = 7
+  )
+
+# 7) wrap in footnotesize + centering and save
+full_tex_hub <- paste0(
+  "{\\footnotesize\n",
+  "\\centering\n",
+  tex_table_hub,
+  "\n}\n"
+)
+cat(full_tex_hub, file = "R-files/tables/table_eda-overall-hub-nohub.tex")
+```
+
+
+## Company Description: Target VC vs No Target VC
+```{r}
+library(dplyr)
+library(tidyr)
+library(kableExtra)
+
+# 1) pivot into long form, with your new TargetVCGroup
+df_long_tvc <- companies_seed %>%
+  mutate(
+    TargetVCGroup = ifelse(`Target VC in Seed Binary` == 1,
+                           "Target VC", "No Target VC")
+  ) %>%
+  select(TargetVCGroup, all_of(vars)) %>%
+  pivot_longer(-TargetVCGroup, names_to = "Variable", values_to = "Value")
+
+# 2) overall summaries
+desc_overall <- df_long_tvc %>%
+  group_by(Variable) %>%
+  summarise(
+    Overall_N    = sum(!is.na(Value)),
+    Overall_Mean = mean(Value, na.rm = TRUE),
+    Overall_SD   = sd(Value,   na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# 3) by‐group summaries (Target VC vs No Target VC)
+desc_by_tvc <- df_long_tvc %>%
+  group_by(Variable, TargetVCGroup) %>%
+  summarise(
+    N    = sum(!is.na(Value)),
+    Mean = mean(Value, na.rm = TRUE),
+    SD   = sd(Value,   na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from  = TargetVCGroup,
+    values_from = c(N, Mean, SD),
+    names_glue  = "{TargetVCGroup}_{.value}"
+  )
+
+# 4) join into final table
+table3_tvc <- desc_overall %>%
+  left_join(desc_by_tvc, by = "Variable") %>%
+  select(
+    Variable,
+    Overall_N,       Overall_Mean,       Overall_SD,
+    `Target VC_N`,   `Target VC_Mean`,   `Target VC_SD`,
+    `No Target VC_N`,`No Target VC_Mean`,`No Target VC_SD`
+  ) %>%
+  mutate(across(-Variable, ~ round(.x, 2)))
+
+# 5) apply ordering & relabeling
+table3_tvc <- table3_tvc %>%
+  mutate(Variable = factor(
+    Variable,
+    levels = order_vars,
+    labels = new_labels
+  )) %>%
+  arrange(Variable) %>%
+  mutate(Variable = as.character(Variable))
+
+# 6) kableExtra pipeline
+tex_table_tvc <- table3_tvc %>%
+  kable(
+    format    = "latex",
+    booktabs  = TRUE,
+    align     = c("l", rep("r", 9)),
+    col.names = c(
+      "Variable",
+      "N", "Mean", "SD",
+      "N", "Mean", "SD",
+      "N", "Mean", "SD"
+    ),
+    caption   = "Descriptive statistics (N, Mean, SD)",
+    escape    = FALSE
+  ) %>%
+  add_header_above(c(
+    " "           = 1,
+    "Overall"     = 3,
+    "Target VC"   = 3,
+    "No Target VC"= 3
+  ), escape = FALSE) %>%
+  kable_styling(
+    position      = "center",
+    latex_options = c("hold_position", "scale_down"),
+    font_size     = 7
+  )
+
+# 7) wrap in footnotesize + centering and save
+full_tex_tvc <- paste0(
+  "{\\footnotesize\n",
+  "\\centering\n",
+  tex_table_tvc,
+  "\n}\n"
+)
+cat(full_tex_tvc, file = "R-files/tables/table_eda-overall-targetvc-notargetvc.tex")
 ```
 
 

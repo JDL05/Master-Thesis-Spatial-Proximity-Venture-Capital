@@ -8,7 +8,9 @@ Variable & Description \\
 \midrule
 \multicolumn{2}{c}{\tiny\textsc{OUTCOME VARIABLE}} \\
 \midrule
-Success & 1 if company exited (IPO or acquisition) or raised Series B or later. \\[0.4em]
+Success & 1 if company exited (IPO or acquisition) or raised more than 20,000,000 USD of Equity Funding. \\[0.4em]
+Exit & 1 if company is flagged as an Exit Case. \\[0.4em]
+Funding Success & 1 if company raised more than 20,000,000 USD of Equity Funding \\[0.4em]
 \addlinespace[0.5em]
 \midrule
 \multicolumn{2}{c}{\tiny\textsc{FUNDAMENTAL VARIABLES}} \\
@@ -18,6 +20,7 @@ Founding Year & Year when the company was founded. \\[0.4em]
 Number of Founders & Total count of the founding team. \\[0.4em]
 Distance to Hub & Distance (km) from HQ to nearest startup hub. \\[0.4em]
 Hub Binary & 1 if HQ is in a startup hub; else 0. \\[0.4em]
+B2B Binary & 1 if startup is focussing business customers; else 0. \\[0.4em]
 Energy & 1 if classified in the GICS Energy sector; else 0. \\[0.4em]
 Materials & 1 if classified in the GICS Materials sector; else 0. \\[0.4em]
 Industrials & 1 if classified in the GICS Industrials sector; else 0. \\[0.4em]
@@ -47,6 +50,7 @@ Accelerator in Seed Binary & 1 if an accelerator participated in seed; else 0. \
 Angel Group in Seed Binary & 1 if an angel group participated in seed; else 0. \\[0.4em]
 Micro VC in Seed Binary & 1 if a micro-VC fund participated in seed; else 0. \\[0.4em]
 Corporate VC in Seed Binary & 1 if a corporate venture arm invested in seed; else 0. \\[0.4em]
+Target VC in Seed Binary & 1 if a target VC invested in seed, else 0. \\[0.4em]
 Number Lead Seed VC & Count of investors who led any seed round. \\[0.4em]
 Regional Lead VC in Seed Binary & 1 if a local investor led the seed round; else 0. \\[0.4em]
 Overregional Lead VC in Seed Binary & 1 if a non-local investor led the seed round; else 0. \\[0.4em]
@@ -55,6 +59,7 @@ Accelerator Lead in Seed Binary & 1 if an accelerator led the seed round; else 0
 Angel Group Lead in Seed Binary & 1 if an angel group led the seed round; else 0. \\[0.4em]
 Micro VC Lead in Seed Binary & 1 if a micro-VC led the seed round; else 0. \\[0.4em]
 Corporate VC Lead in Seed Binary & 1 if a corporate venture arm led the seed round; else 0. \\[0.4em]
+Target VC Lead in Seed Binary & 1 if a target VC led the seed round, else 0. \\[0.4em]
 Years to Seed & Years between founding and first seed round. \\[0.4em]
 Total Seed Funding (M) & Sum of all seed investments in millions USD. \\[0.4em]
 \bottomrule
