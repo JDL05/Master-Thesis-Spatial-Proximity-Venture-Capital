@@ -1039,6 +1039,12 @@ save_kable(tex_table, file = "R-files/tables/table_eda-overall-success-no-succes
 
 ## Company Description: Overall - B2B  - B2C
 ```{r B2B vs B2C}
+library(dplyr)
+library(tidyr)
+library(kableExtra)
+
+# define which vars to restrict to >0
+vars_positive <- c("Number of Founders", "Total Seed Funding (M)")
 
 # 1) pivot into long form, with your new B2BGroup
 df_long_b2b <- companies_seed %>%
@@ -1046,7 +1052,15 @@ df_long_b2b <- companies_seed %>%
     B2BGroup = ifelse(`B2B Binary` == 1, "B2B", "B2C")
   ) %>%
   select(B2BGroup, all_of(vars)) %>%
-  pivot_longer(-B2BGroup, names_to = "Variable", values_to = "Value")
+  pivot_longer(-B2BGroup, names_to = "Variable", values_to = "Value") %>%
+  # for Number of Founders and Total Seed Funding, turn any ≤ 0 into NA
+  mutate(
+    Value = case_when(
+      Variable == "Number of Founders"     & Value <=  0 ~ NA_real_,
+      Variable == "Total Seed Funding (M)" & Value <=  0 ~ NA_real_,
+      TRUE                                       ~ Value
+    )
+  )
 
 # 2) overall summaries
 desc_overall <- df_long_b2b %>%
@@ -1058,7 +1072,7 @@ desc_overall <- df_long_b2b %>%
     .groups = "drop"
   )
 
-# 3) by-group summaries (B2B vs B2C)
+# 3) by‐group summaries (B2B vs B2C)
 desc_by_b2b <- df_long_b2b %>%
   group_by(Variable, B2BGroup) %>%
   summarise(
@@ -1084,7 +1098,7 @@ table3_b2b <- desc_overall %>%
   ) %>%
   mutate(across(-Variable, ~ round(.x, 2)))
 
-# 5) apply your ordering & relabeling
+# 5) apply ordering & relabeling
 table3_b2b <- table3_b2b %>%
   mutate(Variable = factor(
     Variable,
@@ -1110,7 +1124,7 @@ tex_table_b2b <- table3_b2b %>%
     escape    = FALSE
   ) %>%
   add_header_above(c(
-    " "   = 1,
+    " "       = 1,
     "Overall" = 3,
     "B2B"     = 3,
     "B2C"     = 3
@@ -1133,13 +1147,28 @@ cat(full_tex_b2b, file = "R-files/tables/table_eda-overall-b2b-b2c.tex")
 
 ## Company Description: Hub vs No Hub
 ```{r Hub vs No Hub}
+library(dplyr)
+library(tidyr)
+library(kableExtra)
+
+# define which vars to restrict to >0
+vars_positive <- c("Number of Founders", "Total Seed Funding (M)")
+
 # 1) pivot into long form, with your new HubGroup
 df_long_hub <- companies_seed %>%
   mutate(
     HubGroup = ifelse(`Hub Binary` == 1, "Hub", "No‐Hub")
   ) %>%
   select(HubGroup, all_of(vars)) %>%
-  pivot_longer(-HubGroup, names_to = "Variable", values_to = "Value")
+  pivot_longer(-HubGroup, names_to = "Variable", values_to = "Value") %>%
+  # for Number of Founders and Total Seed Funding, turn any ≤ 0 into NA
+  mutate(
+    Value = case_when(
+      Variable == "Number of Founders"     & Value <=  0 ~ NA_real_,
+      Variable == "Total Seed Funding (M)" & Value <=  0 ~ NA_real_,
+      TRUE                                       ~ Value
+    )
+  )
 
 # 2) overall summaries
 desc_overall <- df_long_hub %>%
@@ -1177,7 +1206,7 @@ table3_hub <- desc_overall %>%
   ) %>%
   mutate(across(-Variable, ~ round(.x, 2)))
 
-# 5) apply your ordering & relabeling
+# 5) apply ordering & relabeling
 table3_hub <- table3_hub %>%
   mutate(Variable = factor(
     Variable,
@@ -1224,12 +1253,14 @@ full_tex_hub <- paste0(
 cat(full_tex_hub, file = "R-files/tables/table_eda-overall-hub-nohub.tex")
 ```
 
-
 ## Company Description: Target VC vs No Target VC
 ```{r}
 library(dplyr)
 library(tidyr)
 library(kableExtra)
+
+# define which vars to restrict to >0
+vars_positive <- c("Number of Founders", "Total Seed Funding (M)")
 
 # 1) pivot into long form, with your new TargetVCGroup
 df_long_tvc <- companies_seed %>%
@@ -1238,7 +1269,15 @@ df_long_tvc <- companies_seed %>%
                            "Target VC", "No Target VC")
   ) %>%
   select(TargetVCGroup, all_of(vars)) %>%
-  pivot_longer(-TargetVCGroup, names_to = "Variable", values_to = "Value")
+  pivot_longer(-TargetVCGroup, names_to = "Variable", values_to = "Value") %>%
+  # for Number of Founders and Total Seed Funding, turn any ≤0 into NA
+  mutate(
+    Value = case_when(
+      Variable == "Number of Founders"       & Value <=  0 ~ NA_real_,
+      Variable == "Total Seed Funding (M)"   & Value <=  0 ~ NA_real_,
+      TRUE                                          ~ Value
+    )
+  )
 
 # 2) overall summaries
 desc_overall <- df_long_tvc %>%
@@ -1270,9 +1309,9 @@ table3_tvc <- desc_overall %>%
   left_join(desc_by_tvc, by = "Variable") %>%
   select(
     Variable,
-    Overall_N,       Overall_Mean,       Overall_SD,
-    `Target VC_N`,   `Target VC_Mean`,   `Target VC_SD`,
-    `No Target VC_N`,`No Target VC_Mean`,`No Target VC_SD`
+    Overall_N,        Overall_Mean,        Overall_SD,
+    `Target VC_N`,    `Target VC_Mean`,    `Target VC_SD`,
+    `No Target VC_N`, `No Target VC_Mean`, `No Target VC_SD`
   ) %>%
   mutate(across(-Variable, ~ round(.x, 2)))
 
@@ -1302,10 +1341,10 @@ tex_table_tvc <- table3_tvc %>%
     escape    = FALSE
   ) %>%
   add_header_above(c(
-    " "           = 1,
-    "Overall"     = 3,
-    "Target VC"   = 3,
-    "No Target VC"= 3
+    " "            = 1,
+    "Overall"      = 3,
+    "Target VC"    = 3,
+    "No Target VC" = 3
   ), escape = FALSE) %>%
   kable_styling(
     position      = "center",
@@ -1322,7 +1361,6 @@ full_tex_tvc <- paste0(
 )
 cat(full_tex_tvc, file = "R-files/tables/table_eda-overall-targetvc-notargetvc.tex")
 ```
-
 
 ## Sector Distribution
 ```{r Sector Distribution}
@@ -1395,5 +1433,113 @@ print(latex_table)
 
 setwd("~/Projects/Master-Thesis-Spatial-Proximity-Venture-Capital")
 save_kable(latex_table, file = "R-files/tables/table_sector-distribution.tex")
+```
+
+```{r Hub vs No Hub (Germany, SeedFunding>0)}
+library(dplyr)
+library(tidyr)
+library(kableExtra)
+
+# 0) filter to German HQs
+companies_de_gt0 <- companies_seed %>%
+  filter(`Headquarters Country` == "Germany")
+
+# 1) pivot into long form and zero‐filter only those two vars
+vars_positive <- c("Number of Founders", "Total Seed Funding (M)")
+
+df_long_hub_de <- companies_de_gt0 %>%
+  mutate(HubGroup = ifelse(`Hub Binary` == 1, "Hub", "No‐Hub")) %>%
+  select(HubGroup, all_of(vars)) %>%
+  pivot_longer(-HubGroup, names_to = "Variable", values_to = "Value") %>%
+  # for the two positive‐only vars, turn ≤0 into NA
+  mutate(
+    Value = case_when(
+      Variable == "Number of Founders"     & Value <=  0 ~ NA_real_,
+      Variable == "Total Seed Funding (M)" & Value <=  0 ~ NA_real_,
+      TRUE                                         ~ Value
+    )
+  )
+
+# 2) overall summaries
+desc_overall_de <- df_long_hub_de %>%
+  group_by(Variable) %>%
+  summarise(
+    Overall_N    = sum(!is.na(Value)),
+    Overall_Mean = mean(Value, na.rm = TRUE),
+    Overall_SD   = sd(Value,   na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# 3) by‐group summaries (Hub vs No‐Hub)
+desc_by_hub_de <- df_long_hub_de %>%
+  group_by(Variable, HubGroup) %>%
+  summarise(
+    N    = sum(!is.na(Value)),
+    Mean = mean(Value, na.rm = TRUE),
+    SD   = sd(Value,   na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_wider(
+    names_from  = HubGroup,
+    values_from = c(N, Mean, SD),
+    names_glue  = "{HubGroup}_{.value}"
+  )
+
+# 4) join into final table
+table3_hub_de <- desc_overall_de %>%
+  left_join(desc_by_hub_de, by = "Variable") %>%
+  select(
+    Variable,
+    Overall_N,    Overall_Mean,    Overall_SD,
+    Hub_N,        Hub_Mean,        Hub_SD,
+    `No‐Hub_N`,   `No‐Hub_Mean`,   `No‐Hub_SD`
+  ) %>%
+  mutate(across(-Variable, ~ round(.x, 2)))
+
+# 5) apply your ordering & relabeling
+table3_hub_de <- table3_hub_de %>%
+  mutate(Variable = factor(
+    Variable,
+    levels = order_vars,
+    labels = new_labels
+  )) %>%
+  arrange(Variable) %>%
+  mutate(Variable = as.character(Variable))
+
+# 6) kableExtra pipeline
+tex_table_hub_de <- table3_hub_de %>%
+  kable(
+    format    = "latex",
+    booktabs  = TRUE,
+    align     = c("l", rep("r", 9)),
+    col.names = c(
+      "Variable",
+      "N", "Mean", "SD",
+      "N", "Mean", "SD",
+      "N", "Mean", "SD"
+    ),
+    caption   = "Descriptive statistics for German HQs with Seed Funding > 0 (N, Mean, SD)",
+    escape    = FALSE
+  ) %>%
+  add_header_above(c(
+    " "       = 1,
+    "Overall" = 3,
+    "Hub"     = 3,
+    "No‐Hub"  = 3
+  ), escape = FALSE) %>%
+  kable_styling(
+    position      = "center",
+    latex_options = c("hold_position", "scale_down"),
+    font_size     = 7
+  )
+
+# 7) wrap in footnotesize + centering and save
+full_tex_hub_de <- paste0(
+  "{\\footnotesize\n",
+  "\\centering\n",
+  tex_table_hub_de,
+  "\n}\n"
+)
+cat(full_tex_hub_de, file = "R-files/tables/table_eda-overall-hub-nohub-germany-seedfunding.tex")
 ```
 
