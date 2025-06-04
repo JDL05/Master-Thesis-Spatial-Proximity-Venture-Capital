@@ -694,6 +694,8 @@ vars <- tribble(
   "Treatment Variables",  "Avg Age Seed VC",                       "Mean years of experience among seed investors.",
   "Treatment Variables",  "Avg Exits Seed VC",                     "Mean number of prior successful exits per seed investor.",
   "Treatment Variables",  "Number Seed VC",                        "Count of distinct investors in seed rounds.",
+  "Treatment Variables", "Seed VC Same City Binary", "1 if a Seed VC is in the same city as the startup.",
+  "Treatment Variables", "Homecountry VC in Seed Binary", "1 if a VC is in the same homecountry as the startup.",
   "Treatment Variables",  "Regional Seed VC Binary",               "1 if at least one seed investor is local (<100 km); else 0.",
   "Treatment Variables",  "Overregional Seed VC Binary",           "1 if any seed investor is from outside the region; else 0.",
   "Treatment Variables",  "Specific VC in Seed Binary",            "1 if a topic-focused VC participated in seed; else 0.",
@@ -703,6 +705,8 @@ vars <- tribble(
   "Treatment Variables",  "Corporate VC in Seed Binary",           "1 if a corporate venture arm invested in seed; else 0.",
   "Treatment Variables",  "Target VC in Seed Binary",               "1 if a target VC invested in seed, else 0.",
   "Treatment Variables",  "Number Lead Seed VC",                   "Count of investors who led any seed round.",
+  "Treatment Variables", "Seed Lead VC Same City Binary", "1 if a Lead Seed VC is in the same city as the startup",
+  "Treatment Variables", "Homecountry Lead VC in Seed Binary", "1 if a lead VC is in the same homecountry as the startup.",
   "Treatment Variables",  "Regional Lead VC in Seed Binary",       "1 if a local investor led the seed round; else 0.",
   "Treatment Variables",  "Overregional Lead VC in Seed Binary",    "1 if a non-local investor led the seed round; else 0.",
   "Treatment Variables",  "Specific Lead VC in Lead Seed Binary",   "1 if a named topic-focused VC firm led the seed round; else 0.",
@@ -712,7 +716,8 @@ vars <- tribble(
   "Treatment Variables",  "Corporate VC Lead in Seed Binary",       "1 if a corporate venture arm led the seed round; else 0.",
   "Treatment Variables",  "Target VC Lead in Seed Binary",          "1 if a target VC led the seed round, else 0.",
   "Treatment Variables",  "Years to Seed",                          "Years between founding and first seed round.",
-  "Treatment Variables",  "Total Seed Funding (M)",                 "Sum of all seed investments in millions USD."
+  "Treatment Variables",  "Total Seed Funding (M)",                 "Sum of all seed investments in millions USD.",
+  "Control Variables", "Investment Volume in First Seed Year (log)", "Nationwide seed-stage startup funding in a given year to control for the funding environment."
 )
 
 lines <- character()
@@ -802,7 +807,12 @@ vars <- c(
   "Communication Services",
   "Utilities",
   "Real Estate",
-  "Other"
+  "Other",
+  "Investment Volume in First Seed Year (log)",
+  "Seed Investor Same City",
+  "Seed Lead Investor Same City",
+  "Homecountry Investor",
+  "Homecountry Lead Investor"
 )
 
 df_long_full <- companies_seed %>%
@@ -938,6 +948,8 @@ order_vars <- c(
   "Avg Age of Seed Investors",
   "Avg Exits of Seed Investors",
   "Number Seed Investors",
+  "Seed Investor Same City",
+  "Homecountry Investor",
   "Regional Seed Investor Binary",
   "Overregional Seed Investor Binary",
   "Specific VC in Seed Binary",
@@ -947,6 +959,8 @@ order_vars <- c(
   "Corporate Venture Capital Funding Binary",
   "Target VC in Seed Binary",
   "Number Lead Seed Investors",
+  "Seed Lead Investor Same City",
+  "Homecountry Lead Investor",
   "Regional Lead Seed Investor Binary",
   "Overregional Lead Seed Investor Binary",
   "Specific Lead VC in Seed Binary",
@@ -954,7 +968,8 @@ order_vars <- c(
   "Angel Group Lead Funding Binary",
   "Micro VC Lead Funding Binary",
   "Corporate Venture Capital Lead Funding Binary",
-  "Target Lead VC in Seed Binary"
+  "Target Lead VC in Seed Binary",
+  "Investment Volume in First Seed Year (log)"
 )
 
 new_labels <- c(
@@ -985,6 +1000,8 @@ new_labels <- c(
   "Avg Age Seed VC",
   "Avg Exits Seed VC",
   "Number Seed VC",
+  "Seed VC Same City Binary",
+  "Homecountry VC in Seed Binary",
   "Regional Seed VC Binary",
   "Overregional Seed VC Binary",
   "Specific VC in Seed Binary",
@@ -994,6 +1011,8 @@ new_labels <- c(
   "Corporate VC in Seed Binary",
   "Target VC in Seed Binary",
   "Number Lead Seed VC",
+  "Seed Lead VC Same City Binary",
+  "Homecountry Lead VC in Seed Binary",
   "Regional Lead VC in Seed Binary",
   "Overregional Lead VC in Seed Binary",
   "Specific Lead VC in Seed Binary",
@@ -1001,7 +1020,8 @@ new_labels <- c(
   "Angel Group Lead in Seed Binary",
   "Micro VC Lead in Seed Binary",
   "Corporate VC Lead in Seed Binary",
-  "Target VC Lead in Seed Binary"
+  "Target VC Lead in Seed Binary",
+  "Investment Volume in First Seed Year (log)"
 )
 
 table3 <- table3 %>%

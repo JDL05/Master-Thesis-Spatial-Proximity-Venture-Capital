@@ -1,0 +1,321 @@
+﻿Country,Year,Sums
+Austria,2007,62.3
+Austria,2008,61.7
+Austria,2009,74.6
+Austria,2010,36.9
+Austria,2011,97.7
+Austria,2012,41.9
+Austria,2013,63.6
+Austria,2014,59.3
+Austria,2015,117.3
+Austria,2016,54.1
+Austria,2017,98.7
+Austria,2018,83.7
+Austria,2019,68.8
+Austria,2020,79.4
+Austria,2021,700
+Austria,2022,200
+Baltics,2007,13.5
+Baltics,2008,13.3
+Baltics,2009,4.7
+Baltics,2010,7.4
+Baltics,2011,7.6
+Baltics,2012,14.6
+Baltics,2013,17
+Baltics,2014,25.1
+Baltics,2015,19.9
+Baltics,2016,17
+Baltics,2017,8.7
+Baltics,2018,38.1
+Baltics,2019,36.2
+Baltics,2020,45.8
+Baltics,2021,205.1
+Baltics,2022,230.2
+Belgium,2007,193.3
+Belgium,2008,114.8
+Belgium,2009,148.6
+Belgium,2010,82.6
+Belgium,2011,116.2
+Belgium,2012,125.9
+Belgium,2013,111.2
+Belgium,2014,107.4
+Belgium,2015,100
+Belgium,2016,200
+Belgium,2017,200
+Belgium,2018,300
+Belgium,2019,400
+Belgium,2020,500
+Belgium,2021,400
+Belgium,2022,300
+Czech Republic,2007,2.5
+Czech Republic,2008,33.3
+Czech Republic,2009,0.2
+Czech Republic,2010,13.1
+Czech Republic,2011,3.5
+Czech Republic,2012,5.2
+Czech Republic,2013,4.5
+Czech Republic,2014,7.4
+Czech Republic,2015,4.9
+Czech Republic,2016,7.9
+Czech Republic,2017,6.2
+Czech Republic,2018,12.6
+Czech Republic,2019,29.1
+Czech Republic,2020,17.7
+Czech Republic,2021,111.2
+Czech Republic,2022,72.9
+Denmark,2007,165.1
+Denmark,2008,176.3
+Denmark,2009,75.2
+Denmark,2010,62.1
+Denmark,2011,130.3
+Denmark,2012,67.7
+Denmark,2013,60.7
+Denmark,2014,68
+Denmark,2015,75
+Denmark,2016,98.5
+Denmark,2017,121.1
+Denmark,2018,300
+Denmark,2019,300
+Denmark,2020,300
+Denmark,2021,800
+Denmark,2022,300
+Finland,2007,133.6
+Finland,2008,148.5
+Finland,2009,92.8
+Finland,2010,103.2
+Finland,2011,87.3
+Finland,2012,81.1
+Finland,2013,119.4
+Finland,2014,118.9
+Finland,2015,109.4
+Finland,2016,105.8
+Finland,2017,200
+Finland,2018,200
+Finland,2019,300
+Finland,2020,400
+Finland,2021,400
+Finland,2022,300
+France,2007,685.8
+France,2008,510.3
+France,2009,403.9
+France,2010,400
+France,2011,400
+France,2012,400
+France,2013,500
+France,2014,400
+France,2015,500
+France,2016,600
+France,2017,900
+France,2018,1200
+France,2019,1600
+France,2020,1400
+France,2021,2600
+France,2022,3100
+Germany,2007,786.5
+Germany,2008,1013.5
+Germany,2009,700
+Germany,2010,600
+Germany,2011,700
+Germany,2012,600
+Germany,2013,700
+Germany,2014,700
+Germany,2015,900
+Germany,2016,1400
+Germany,2017,1400
+Germany,2018,1400
+Germany,2019,2100
+Germany,2020,1900
+Germany,2021,4100
+Germany,2022,3400
+Greece,2007,19
+Greece,2008,32.7
+Greece,2009,16.6
+Greece,2010,5
+Greece,2011,9.9
+Greece,2012,0
+Greece,2013,13.9
+Greece,2014,11.1
+Greece,2015,34.1
+Greece,2016,8.2
+Greece,2017,8.6
+Greece,2018,30.7
+Greece,2019,25
+Greece,2020,19.5
+Greece,2021,66
+Greece,2022,64.3
+Hungary,2007,11.2
+Hungary,2008,6
+Hungary,2009,1.2
+Hungary,2010,18.9
+Hungary,2011,36.1
+Hungary,2012,39.9
+Hungary,2013,28.3
+Hungary,2014,45.5
+Hungary,2015,49.8
+Hungary,2016,52.2
+Hungary,2017,50.1
+Hungary,2018,68.7
+Hungary,2019,141.7
+Hungary,2020,129.8
+Hungary,2021,134.7
+Hungary,2022,83.8
+Ireland,2007,72.9
+Ireland,2008,82.1
+Ireland,2009,78.1
+Ireland,2010,51.2
+Ireland,2011,61.1
+Ireland,2012,81.7
+Ireland,2013,113.7
+Ireland,2014,91.9
+Ireland,2015,91.6
+Ireland,2016,200.6
+Ireland,2017,175.1
+Ireland,2018,300
+Ireland,2019,200
+Ireland,2020,200
+Ireland,2021,200
+Ireland,2022,400
+Italy,2007,128.8
+Italy,2008,176.7
+Italy,2009,91.9
+Italy,2010,77.3
+Italy,2011,106.8
+Italy,2012,101
+Italy,2013,78.1
+Italy,2014,52.4
+Italy,2015,75.7
+Italy,2016,77.1
+Italy,2017,134.2
+Italy,2018,100
+Italy,2019,200
+Italy,2020,400
+Italy,2021,400
+Italy,2022,700
+The Netherlands,2007,255.5
+The Netherlands,2008,258.6
+The Netherlands,2009,143.6
+The Netherlands,2010,155.2
+The Netherlands,2011,147.3
+The Netherlands,2012,139.8
+The Netherlands,2013,200
+The Netherlands,2014,200
+The Netherlands,2015,200
+The Netherlands,2016,200
+The Netherlands,2017,400
+The Netherlands,2018,400
+The Netherlands,2019,500
+The Netherlands,2020,700
+The Netherlands,2021,1300
+The Netherlands,2022,1000
+Norway,2007,263
+Norway,2008,180.3
+Norway,2009,128
+Norway,2010,154.5
+Norway,2011,127.6
+Norway,2012,97
+Norway,2013,49.6
+Norway,2014,75
+Norway,2015,75
+Norway,2016,75
+Norway,2017,75
+Norway,2018,100
+Norway,2019,200
+Norway,2020,100
+Norway,2021,200
+Norway,2022,100
+Poland,2007,40.6
+Poland,2008,50.3
+Poland,2009,3.9
+Poland,2010,3.7
+Poland,2011,27.9
+Poland,2012,9.9
+Poland,2013,16.5
+Poland,2014,23.9
+Poland,2015,32
+Poland,2016,79.7
+Poland,2017,45.7
+Poland,2018,33.3
+Poland,2019,100.4
+Poland,2020,138.5
+Poland,2021,121.4
+Poland,2022,229.7
+Portugal,2007,112.8
+Portugal,2008,50.3
+Portugal,2009,33.9
+Portugal,2010,17
+Portugal,2011,9.9
+Portugal,2012,11.8
+Portugal,2013,28.4
+Portugal,2014,36.7
+Portugal,2015,44.8
+Portugal,2016,19.4
+Portugal,2017,24.1
+Portugal,2018,25.2
+Portugal,2019,46.8
+Portugal,2020,40.2
+Portugal,2021,47.5
+Portugal,2022,63.9
+Spain,2007,279.7
+Spain,2008,262.3
+Spain,2009,193.1
+Spain,2010,253.7
+Spain,2011,311.2
+Spain,2012,100
+Spain,2013,200
+Spain,2014,300
+Spain,2015,500
+Spain,2016,400
+Spain,2017,600
+Spain,2018,500
+Spain,2019,400
+Spain,2020,800
+Spain,2021,1500
+Spain,2022,900
+Sweden,2007,411.3
+Sweden,2008,371
+Sweden,2009,217.7
+Sweden,2010,300
+Sweden,2011,300
+Sweden,2012,200
+Sweden,2013,300
+Sweden,2014,200
+Sweden,2015,200
+Sweden,2016,200
+Sweden,2017,200
+Sweden,2018,400
+Sweden,2019,300
+Sweden,2020,600
+Sweden,2021,900
+Sweden,2022,1000
+Switzerland,2007,256.7
+Switzerland,2008,141.8
+Switzerland,2009,176.6
+Switzerland,2010,161.1
+Switzerland,2011,178.9
+Switzerland,2012,84.9
+Switzerland,2013,200
+Switzerland,2014,100
+Switzerland,2015,300
+Switzerland,2016,300
+Switzerland,2017,300
+Switzerland,2018,500
+Switzerland,2019,400
+Switzerland,2020,500
+Switzerland,2021,700
+Switzerland,2022,800
+United Kingdom,2007,1500
+United Kingdom,2008,1400
+United Kingdom,2009,700
+United Kingdom,2010,700
+United Kingdom,2011,800
+United Kingdom,2012,700
+United Kingdom,2013,700
+United Kingdom,2014,900
+United Kingdom,2015,1300
+United Kingdom,2016,900
+United Kingdom,2017,2200
+United Kingdom,2018,2200
+United Kingdom,2019,3000
+United Kingdom,2020,2700
+United Kingdom,2021,5600
+United Kingdom,2022,3600
