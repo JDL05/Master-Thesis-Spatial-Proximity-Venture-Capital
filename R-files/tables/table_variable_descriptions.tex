@@ -11,6 +11,7 @@ Variable & Description \\
 Success & 1 if company exited (IPO or acquisition) or raised more than 20,000,000 USD of Equity Funding. \\[0.4em]
 Exit & 1 if company is flagged as an Exit Case. \\[0.4em]
 Funding Success & 1 if company raised more than 20,000,000 USD of Equity Funding \\[0.4em]
+Years to Exit & Years from startup incorporation to exit. \\[0.4em]
 \addlinespace[0.5em]
 \midrule
 \multicolumn{2}{c}{\tiny\textsc{FUNDAMENTAL VARIABLES}} \\
@@ -21,6 +22,8 @@ Number of Founders & Total count of the founding team. \\[0.4em]
 Distance to Hub & Distance (km) from HQ to nearest startup hub. \\[0.4em]
 Hub Binary & 1 if HQ is in a startup hub; else 0. \\[0.4em]
 B2B Binary & 1 if startup is focussing business customers; else 0. \\[0.4em]
+Startups Within 50km & Number of Startups inside a 50km radius; accumulated over years. \\[0.4em]
+VCs Within 50km & Number of Investors inside a 50km radius. \\[0.4em]
 Energy & 1 if classified in the GICS Energy sector; else 0. \\[0.4em]
 Materials & 1 if classified in the GICS Materials sector; else 0. \\[0.4em]
 Industrials & 1 if classified in the GICS Industrials sector; else 0. \\[0.4em]
@@ -39,6 +42,11 @@ Other & 1 if classified outside the 11 GICS sectors; else 0. \\[0.4em]
 \midrule
 Number Seed Rounds & Total number of seed funding rounds completed. \\[0.4em]
 Avg Seed VC Distance & Mean distance (km) between seed investors and HQ. \\[0.4em]
+Minimum Seed VC Distance & Minimum distance (km) between seed investors and HQ. \\[0.4em]
+Maximum Seed VC Distance & Maximum distance (km) between seed investors and HQ. \\[0.4em]
+Avg Seed Investor Pairwise Distance & Average distance between the seed investors. \\[0.4em]
+Minimum Seed Investor Pairwise Distance & Minimum distance between the seed investors. \\[0.4em]
+Maximum Seed Investor Pairwise Distance & Maximum distance between the seed investors. \\[0.4em]
 Avg Seed VC Portfolio Organizations & Average portfolio size of seed investors. \\[0.4em]
 Avg Age Seed VC & Mean years of experience among seed investors. \\[0.4em]
 Avg Exits Seed VC & Mean number of prior successful exits per seed investor. \\[0.4em]
@@ -71,6 +79,7 @@ Total Seed Funding (M) & Sum of all seed investments in millions USD. \\[0.4em]
 \multicolumn{2}{c}{\tiny\textsc{CONTROL VARIABLES}} \\
 \midrule
 Investment Volume in First Seed Year (log) & Nationwide seed-stage startup funding in a given year to control for the funding environment. \\[0.4em]
+GDP Growth (%) in Funding Year & European GDP Growth in the startup's year of funding. \\[0.4em]
 \bottomrule
 \end{tabular}
 }

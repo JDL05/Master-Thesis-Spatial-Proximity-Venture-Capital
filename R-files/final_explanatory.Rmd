@@ -664,6 +664,7 @@ vars <- tribble(
   "Outcome Variable",        "Success",                               "1 if company exited (IPO or acquisition) or raised more than 20,000,000 USD of Equity Funding.",
   "Outcome Variable", "Exit", "1 if company is flagged as an Exit Case.",
   "Outcome Variable", "Funding Success", "1 if company raised more than 20,000,000 USD of Equity Funding",
+  "Outcome Variable", "Years to Exit", "Years from startup incorporation to exit.",
 
   # Fundamental variables ---> pre-existing, no treatment effect
   "Fundamental Variables",   "Headquarters Country",                  "Country where the company is headquartered.",
@@ -672,7 +673,8 @@ vars <- tribble(
   "Fundamental Variables",   "Distance to Hub",                       "Distance (km) from HQ to nearest startup hub.",
   "Fundamental Variables",   "Hub Binary",                            "1 if HQ is in a startup hub; else 0.",
   "Fundamental Variables",   "B2B Binary",                            "1 if startup is focussing business customers; else 0.",
-
+  "Fundamental Variables", "Startups Within 50km", "Number of Startups inside a 50km radius; accumulated over years.",
+  "Fundamental Variables", "VCs Within 50km", "Number of Investors inside a 50km radius.",
   # --- here come the 11 GICS‐head sectors + Other
   "Fundamental Variables",   "Energy",                                "1 if classified in the GICS Energy sector; else 0.",
   "Fundamental Variables",   "Materials",                             "1 if classified in the GICS Materials sector; else 0.",
@@ -690,6 +692,11 @@ vars <- tribble(
   # Treatment (investor & funding) variables ---> treatment
   "Treatment Variables",  "Number Seed Rounds",                    "Total number of seed funding rounds completed.",
   "Treatment Variables",  "Avg Seed VC Distance",                  "Mean distance (km) between seed investors and HQ.",
+  "Treatment Variables", "Minimum Seed VC Distance", "Minimum distance (km) between seed investors and HQ.",
+  "Treatment Variables", "Maximum Seed VC Distance", "Maximum distance (km) between seed investors and HQ.",
+  "Treatment Variables", "Avg Seed Investor Pairwise Distance", "Average distance between the seed investors.", 
+  "Treatment Variables", "Minimum Seed Investor Pairwise Distance", "Minimum distance between the seed investors.", 
+  "Treatment Variables", "Maximum Seed Investor Pairwise Distance", "Maximum distance between the seed investors.", 
   "Treatment Variables",  "Avg Seed VC Portfolio Organizations",    "Average portfolio size of seed investors.",
   "Treatment Variables",  "Avg Age Seed VC",                       "Mean years of experience among seed investors.",
   "Treatment Variables",  "Avg Exits Seed VC",                     "Mean number of prior successful exits per seed investor.",
@@ -717,7 +724,8 @@ vars <- tribble(
   "Treatment Variables",  "Target VC Lead in Seed Binary",          "1 if a target VC led the seed round, else 0.",
   "Treatment Variables",  "Years to Seed",                          "Years between founding and first seed round.",
   "Treatment Variables",  "Total Seed Funding (M)",                 "Sum of all seed investments in millions USD.",
-  "Control Variables", "Investment Volume in First Seed Year (log)", "Nationwide seed-stage startup funding in a given year to control for the funding environment."
+  "Control Variables", "Investment Volume in First Seed Year (log)", "Nationwide seed-stage startup funding in a given year to control for the funding environment.",
+  "Control Variables", "GDP Growth (%) in Funding Year", "European GDP Growth in the startup's year of funding."
 )
 
 lines <- character()
@@ -759,7 +767,6 @@ lines <- c(lines, "}")
 writeLines(lines, "R-files/tables/table_variable_descriptions.tex")
 ```
 
-
 ## Company Features Comparison: Overall - Success - No Success
 
 ```{r Company Features EDA Success/No Success}
@@ -767,12 +774,20 @@ vars <- c(
   "Success",
   "Exit Binary",
   "Funding Success",
+  "Years to Exit",
   "Number of Founders",
   "Distance to Hub",
   "Hub Binary",
   "B2B Binary",
+  "Startups Within 50km",
+  "VCs Within 50km",
   "Number Seed Rounds",
   "Avg Seed Investor Distance",
+  "Minimum Seed VC Distance",
+  "Maximum Seed VC Distance",
+  "Avg Seed Investor Pairwise Distance",
+  "Min Seed Investor Pairwise Distance",
+  "Max Seed Investor Pairwise Distance",
   "Average Seed Investors Portfolio Organizations",
   "Number Seed Investors",
   "Regional Seed Investor Binary",
@@ -815,11 +830,69 @@ vars <- c(
   "Homecountry Lead Investor"
 )
 
+vars_special <- c("Years to Exit", "Exit Binary", "Funding Success")
+vars_main <- setdiff(vars, vars_special)
+
 df_long_full <- companies_seed %>%
   mutate(SuccessGroup = ifelse(Success == 1, "Successful", "Non-successful")) %>%
+  select(SuccessGroup, all_of(vars_main)) %>%
+  pivot_longer(-SuccessGroup, names_to = "Variable", values_to = "Value")
+
+df_long_full_all <- companies_seed %>%
+  mutate(SuccessGroup = ifelse(Success == 1, "Successful", "Non-successful")) %>%
   select(SuccessGroup, all_of(vars)) %>%
+  pivot_longer(-SuccessGroup, names_to = "Variable", values_to = "Value")
+
+# Add filtered 'Years to Exit' for successful startups only
+df_long_exit <- companies_seed %>%
+  filter(Success == 1 & !is.na(`Years to Exit`)) %>%
+  mutate(SuccessGroup = "Successful") %>%
+  select(SuccessGroup, `Years to Exit`) %>%
+  pivot_longer(-SuccessGroup, names_to = "Variable", values_to = "Value")
+
+df_long_exitbin <- companies_seed %>%
+  filter(`Exit Binary` == 1) %>%
+  mutate(SuccessGroup = ifelse(Success == 1, "Successful", "Non-successful")) %>%
+  select(SuccessGroup, `Exit Binary`) %>%
+  pivot_longer(-SuccessGroup, names_to = "Variable", values_to = "Value")
+
+df_long_funding <- companies_seed %>%
+  filter(`Funding Success` == 1) %>%
+  mutate(SuccessGroup = ifelse(Success == 1, "Successful", "Non-successful")) %>%
+  select(SuccessGroup, `Funding Success`) %>%
+  pivot_longer(-SuccessGroup, names_to = "Variable", values_to = "Value")
+
+# df_long_full with vars_main
+df_long_main <- companies_seed %>%
+  mutate(SuccessGroup = ifelse(Success == 1, "Successful", "Non-successful")) %>%
+  select(SuccessGroup, all_of(vars_main)) %>%
   pivot_longer(-SuccessGroup, names_to="Variable", values_to="Value")
 
+# Special vars with filters
+df_long_exit <- companies_seed %>%
+  filter(Success == 1 & !is.na(`Years to Exit`)) %>%
+  mutate(SuccessGroup = "Successful") %>%
+  select(SuccessGroup, `Years to Exit`) %>%
+  pivot_longer(-SuccessGroup, names_to = "Variable", values_to = "Value")
+
+df_long_exitbin <- companies_seed %>%
+  filter(`Exit Binary` == 1) %>%
+  mutate(SuccessGroup = ifelse(Success == 1, "Successful", "Non-successful")) %>%
+  select(SuccessGroup, `Exit Binary`) %>%
+  pivot_longer(-SuccessGroup, names_to = "Variable", values_to = "Value")
+
+df_long_funding <- companies_seed %>%
+  filter(`Funding Success` == 1) %>%
+  mutate(SuccessGroup = ifelse(Success == 1, "Successful", "Non-successful")) %>%
+  select(SuccessGroup, `Funding Success`) %>%
+  pivot_longer(-SuccessGroup, names_to = "Variable", values_to = "Value")
+
+df_long_full <- bind_rows(
+  df_long_main,
+  df_long_exit,
+  df_long_exitbin,
+  df_long_funding
+)
 
 df_long_founders <- companies_seed %>%
   filter(!is.na(`Number of Founders`) & `Number of Founders` > 0) %>%
@@ -833,13 +906,13 @@ df_long_seed <- companies_seed %>%
   select(SuccessGroup, `Total Seed Funding (M)`) %>%
   pivot_longer(-SuccessGroup, names_to="Variable", values_to="Value")
 
-desc_overall_full <- df_long_full %>%
+desc_overall_full <- df_long_full_all %>%
   group_by(Variable) %>%
   summarise(
     Overall_N    = sum(!is.na(Value)),
     Overall_Mean = mean(Value, na.rm=TRUE),
     Overall_SD   = sd(Value,   na.rm=TRUE),
-    .groups="drop"
+    .groups = "drop"
   )
 
 desc_overall_founders <- df_long_founders %>%
@@ -924,10 +997,13 @@ order_vars <- c(
   "Success",
   "Exit Binary",
   "Funding Success",
+  "Years to Exit",
   "Number of Founders",
   "Distance to Hub",
   "Hub Binary",
   "B2B Binary",
+  "Startups Within 50km",
+  "VCs Within 50km",
   "Energy",
   "Materials",
   "Industrials",
@@ -944,6 +1020,11 @@ order_vars <- c(
   "Total Seed Funding (M)",
   "Number Seed Rounds",
   "Avg Seed Investor Distance",
+  "Minimum Seed VC Distance",
+  "Maximum Seed VC Distance",
+  "Avg Seed Investor Pairwise Distance",
+  "Min Seed Investor Pairwise Distance",
+  "Max Seed Investor Pairwise Distance",
   "Average Seed Investors Portfolio Organizations",
   "Avg Age of Seed Investors",
   "Avg Exits of Seed Investors",
@@ -976,10 +1057,13 @@ new_labels <- c(
   "Success",
   "Exit",
   "Funding Success",
+  "Years to Exit",
   "Number of Founders",
   "Distance to Hub",
   "Hub Binary",
   "B2B Binary",
+  "VCs Within 50km",
+  "Startups Within 50km",
   "Energy",
   "Materials",
   "Industrials",
@@ -996,6 +1080,11 @@ new_labels <- c(
   "Total Seed Funding (M)",
   "Number Seed Rounds",
   "Avg Seed VC Distance",
+  "Min Seed VC Distance",
+  "Max Seed VC Distance",
+  "Avg Seed Investor Pairwise Distance",
+  "Min Seed Investor Pairwise Distance",
+  "Max Seed Investor Pairwise Distance",
   "Avg Seed VC Portfolio Organizations",
   "Avg Age Seed VC",
   "Avg Exits Seed VC",
@@ -1056,6 +1145,7 @@ tex_table <- kable(
 
 save_kable(tex_table, file = "R-files/tables/table_eda-overall-success-no-success.tex")
 ```
+
 
 ## Company Description: Overall - B2B  - B2C
 ```{r B2B vs B2C}
