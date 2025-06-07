@@ -675,6 +675,8 @@ vars <- tribble(
   "Fundamental Variables",   "B2B Binary",                            "1 if startup is focussing business customers; else 0.",
   "Fundamental Variables", "Startups Within 50km", "Number of Startups inside a 50km radius; accumulated over years.",
   "Fundamental Variables", "VCs Within 50km", "Number of Investors inside a 50km radius.",
+  "Fundamental Variables", "Top University Count", "Number of Top Universities within a 20km radius. A Top University is ranked at position 200 or better.",
+    "Fundamental Variables", "Top University Ecosystem Binary", "1 if company is within a 20km radius to a Top University. A Top University is ranked at position 200 or better.",
   # --- here come the 11 GICS‐head sectors + Other
   "Fundamental Variables",   "Energy",                                "1 if classified in the GICS Energy sector; else 0.",
   "Fundamental Variables",   "Materials",                             "1 if classified in the GICS Materials sector; else 0.",
@@ -711,6 +713,7 @@ vars <- tribble(
   "Treatment Variables",  "Micro VC in Seed Binary",               "1 if a micro-VC fund participated in seed; else 0.",
   "Treatment Variables",  "Corporate VC in Seed Binary",           "1 if a corporate venture arm invested in seed; else 0.",
   "Treatment Variables",  "Target VC in Seed Binary",               "1 if a target VC invested in seed, else 0.",
+  "Treatment Variables", "Hub VC in Seed Binary", "1 if a hub VC invested in seed; else 0.", 
   "Treatment Variables",  "Number Lead Seed VC",                   "Count of investors who led any seed round.",
   "Treatment Variables", "Seed Lead VC Same City Binary", "1 if a Lead Seed VC is in the same city as the startup",
   "Treatment Variables", "Homecountry Lead VC in Seed Binary", "1 if a lead VC is in the same homecountry as the startup.",
@@ -721,6 +724,7 @@ vars <- tribble(
   "Treatment Variables",  "Angel Group Lead in Seed Binary",        "1 if an angel group led the seed round; else 0.",
   "Treatment Variables",  "Micro VC Lead in Seed Binary",           "1 if a micro-VC led the seed round; else 0.",
   "Treatment Variables",  "Corporate VC Lead in Seed Binary",       "1 if a corporate venture arm led the seed round; else 0.",
+    "Treatment Variables", "Hub Lead VC in Seed Binary", "1 if a hub VC led the seed round; else 0.",
   "Treatment Variables",  "Target VC Lead in Seed Binary",          "1 if a target VC led the seed round, else 0.",
   "Treatment Variables",  "Years to Seed",                          "Years between founding and first seed round.",
   "Treatment Variables",  "Total Seed Funding (M)",                 "Sum of all seed investments in millions USD.",
@@ -781,6 +785,8 @@ vars <- c(
   "B2B Binary",
   "Startups Within 50km",
   "VCs Within 50km",
+  "Top University Count",
+  "Top University Ecosystem Binary", 
   "Number Seed Rounds",
   "Avg Seed Investor Distance",
   "Minimum Seed VC Distance",
@@ -800,6 +806,8 @@ vars <- c(
   "Specific VC in Seed Binary",
   "Specific Lead VC in Seed Binary",
   "Target VC in Seed Binary",
+  "Hub VC in Seed Binary",
+  "Hub Lead VC in Seed Binary",
   "Target Lead VC in Seed Binary",
   "Accelerator Funding Binary",
   "Angel Group Funding Binary",
@@ -1004,6 +1012,8 @@ order_vars <- c(
   "B2B Binary",
   "Startups Within 50km",
   "VCs Within 50km",
+  "Top University Count",
+  "Top University Ecosystem Binary", 
   "Energy",
   "Materials",
   "Industrials",
@@ -1039,6 +1049,7 @@ order_vars <- c(
   "Micro VC Funding Binary",
   "Corporate Venture Capital Funding Binary",
   "Target VC in Seed Binary",
+  "Hub VC in Seed Binary",
   "Number Lead Seed Investors",
   "Seed Lead Investor Same City",
   "Homecountry Lead Investor",
@@ -1050,6 +1061,7 @@ order_vars <- c(
   "Micro VC Lead Funding Binary",
   "Corporate Venture Capital Lead Funding Binary",
   "Target Lead VC in Seed Binary",
+  "Hub Lead VC in Seed Binary",
   "Investment Volume in First Seed Year (log)"
 )
 
@@ -1063,6 +1075,8 @@ new_labels <- c(
   "Hub Binary",
   "B2B Binary",
   "VCs Within 50km",
+  "Top University Count",
+  "Top University Ecosystem Binary", 
   "Startups Within 50km",
   "Energy",
   "Materials",
@@ -1099,6 +1113,7 @@ new_labels <- c(
   "Micro VC in Seed Binary",
   "Corporate VC in Seed Binary",
   "Target VC in Seed Binary",
+  "Hub VC in Seed Binary",
   "Number Lead Seed VC",
   "Seed Lead VC Same City Binary",
   "Homecountry Lead VC in Seed Binary",
@@ -1110,6 +1125,7 @@ new_labels <- c(
   "Micro VC Lead in Seed Binary",
   "Corporate VC Lead in Seed Binary",
   "Target VC Lead in Seed Binary",
+  "Hub Lead VC in Seed Binary",
   "Investment Volume in First Seed Year (log)"
 )
 
@@ -1144,6 +1160,10 @@ tex_table <- kable(
   kable_styling(latex_options = c("hold_position", "scale_down"))
 
 save_kable(tex_table, file = "R-files/tables/table_eda-overall-success-no-success.tex")
+```
+
+```{r}
+table3
 ```
 
 
