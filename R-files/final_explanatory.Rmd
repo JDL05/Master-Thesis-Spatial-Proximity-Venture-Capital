@@ -532,7 +532,7 @@ print(funding_tbl_fmt, n = Inf)
 ## Companies
 ### Success by Year
 ```{r Success by Year}
-warm_cols <- c("No Success" = "#E69F00", "Success" = "#D55E00")
+warm_cols <- c("No Success" = "#808080", "Success" = "#9ecac1")
 shared_theme <- theme_minimal(base_size = 14) +
   theme(
     plot.title         = element_text(face = "bold", size = 16, hjust = 0.5),
@@ -675,6 +675,7 @@ vars <- tribble(
   "Fundamental Variables",   "B2B Binary",                            "1 if startup is focussing business customers; else 0.",
   "Fundamental Variables", "Startups Within 50km", "Number of Startups inside a 50km radius; accumulated over years.",
   "Fundamental Variables", "VCs Within 50km", "Number of Investors inside a 50km radius.",
+  "Fundamental Variables", "Share Successful Startups in Environment", "Share of Successful Startups in a 10 km radius.",
   "Fundamental Variables", "Top University Count", "Number of Top Universities within a 20km radius. A Top University is ranked at position 200 or better.",
     "Fundamental Variables", "Top University Ecosystem Binary", "1 if company is within a 20km radius to a Top University. A Top University is ranked at position 200 or better.",
   # --- here come the 11 GICS‐head sectors + Other
@@ -785,6 +786,7 @@ vars <- c(
   "B2B Binary",
   "Startups Within 50km",
   "VCs Within 50km",
+  "Share Successful Startups in Environment",
   "Top University Count",
   "Top University Ecosystem Binary", 
   "Number Seed Rounds",
@@ -1012,6 +1014,7 @@ order_vars <- c(
   "B2B Binary",
   "Startups Within 50km",
   "VCs Within 50km",
+  "Share Successful Startups in Environment",
   "Top University Count",
   "Top University Ecosystem Binary", 
   "Energy",
@@ -1074,10 +1077,11 @@ new_labels <- c(
   "Distance to Hub",
   "Hub Binary",
   "B2B Binary",
+  "Startups Within 50km",
   "VCs Within 50km",
+  "Share Successful Startups in Environment",
   "Top University Count",
   "Top University Ecosystem Binary", 
-  "Startups Within 50km",
   "Energy",
   "Materials",
   "Industrials",
@@ -1162,9 +1166,6 @@ tex_table <- kable(
 save_kable(tex_table, file = "R-files/tables/table_eda-overall-success-no-success.tex")
 ```
 
-```{r}
-table3
-```
 
 
 ## Company Description: Overall - B2B  - B2C
@@ -1672,4 +1673,7 @@ full_tex_hub_de <- paste0(
 )
 cat(full_tex_hub_de, file = "R-files/tables/table_eda-overall-hub-nohub-germany-seedfunding.tex")
 ```
+
+
+
 
