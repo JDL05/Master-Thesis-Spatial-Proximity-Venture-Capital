@@ -1,0 +1,235 @@
+---
+title: "regression"
+author: "Jan Linzner"
+date: "2025-06-09"
+output: html_document
+---
+
+```{r}
+# ==============================
+# Optimaler Analyse-Workflow: Moderierte Mediation
+# ==============================
+
+# 0) Packages installieren/laden ---------------------------------------------
+library(dplyr)
+library(car)
+library(sandwich)
+library(lmtest)
+library(interactions)
+library(jtools)
+library(lavaan)
+library(semTools)
+library(stargazer)
+
+# 1) Daten simulieren & randomisieren ----------------------------------------
+set.seed(2025)
+n   <- 100
+IV  <- rnorm(n)
+W   <- rnorm(n)
+M   <- 0.5*IV + 0.3*W + 0.4*(IV*W) + rnorm(n, sd=1)
+DV  <- 0.7*M  + 0.2*IV           + rnorm(n, sd=1)
+df  <- data.frame(IV, W, M, DV) %>%
+  slice(sample(1:n(), n())) %>%  # zufällige Reihenfolge
+  mutate(id = row_number()) %>%
+  select(id, everything())
+
+# 2) Variablen zentrieren & Interaktionsterm --------------------------------
+df <- df %>%
+  mutate(
+    IV_c = scale(IV, center=TRUE, scale=FALSE),
+    W_c  = scale(W,  center=TRUE, scale=FALSE),
+    Int  = IV_c * W_c
+  )
+
+# 3) Basis-Modell (Total-Effekt c) -------------------------------------------
+fit_total <- lm(DV ~ IV_c, data = df)
+
+# 4) Mediations- & Moderationsmodelle ---------------------------------------
+## 4.1 a-Pfad mit Moderation (M ~ IV + W + IV×W)
+fit_a <- lm(M ~ IV_c * W_c, data = df)
+
+## 4.2 b- & c′-Pfad (DV ~ M + IV + W)
+fit_b <- lm(DV ~ M + IV_c + W_c, data = df)
+
+# 5) Robuste Standardfehler (HC3) --------------------------------------------
+se_total <- sqrt(diag(vcovHC(fit_total, type="HC3")))
+se_a     <- sqrt(diag(vcovHC(fit_a,     type="HC3")))
+se_b     <- sqrt(diag(vcovHC(fit_b,     type="HC3")))
+
+# 6) Subgruppen-Analysen (±1 SD von W_c) -------------------------------------
+sd_w    <- sd(df$W_c)
+df_low  <- filter(df, W_c <= -sd_w)
+df_high <- filter(df, W_c >=  sd_w)
+
+fit_low  <- lm(M ~ IV_c, data = df_low)
+fit_high <- lm(M ~ IV_c, data = df_high)
+
+# 7) Simple Slopes & Johnson–Neyman ------------------------------------------
+interact_plot(fit_a, pred = IV_c, modx = W_c,
+              interval=TRUE, int.width=0.95)
+johnson_neyman(fit_a, pred="IV_c", modx="W_c", alpha=0.05)
+
+# 8) SEM mit Bootstrapping (bedingte indirekte Effekte) ----------------------
+sem_model <- '
+  # a-Pfad mit Moderation
+  M  ~ a1*IV_c + a2*W_c + a3*Int
+  # b-Pfad + direkter c′-Effekt
+  DV ~ b*M + c*IV_c + d*W_c
+
+  # bedingte indirekte Effekte bei W = –1 SD / +1 SD
+  IE_low  := (a1 + a3*(-1)) * b
+  IE_high := (a1 + a3*( 1)) * b
+'
+fit_sem <- sem(sem_model,
+               data          = df,
+               se            = "bootstrap",
+               bootstrap     = 5000,
+               meanstructure = TRUE)
+
+# 9) SEM-Ergebnisse (CI & Standardisiert) -----------------------------------
+summary(fit_sem,
+        standardized = TRUE,
+        ci           = TRUE,
+        rsquare      = TRUE)
+
+# 10) stargazer-Output für’s Paper -------------------------------------------
+stargazer(
+  # Modelle
+  fit_total, fit_a, fit_b, fit_low, fit_high,
+  # Robuste SEs
+  se            = list(se_total, se_a, se_b, NULL, NULL),
+  # Beschriftungen
+  title           = "Übersicht der Regressionsmodelle: Moderierte Mediation",
+  column.labels   = c("Total-Effekt", "a-Pfad gesamt", "b/c′-Pfad",
+                      "a-Pfad (low W)", "a-Pfad (high W)"),
+  dep.var.labels  = c("DV", "Mediator (M)", "DV",
+                      "Mediator (M)", "Mediator (M)"),
+  covariate.labels= c("IV (z)", "W (z)", "IV×W", "Mediator"),
+  # LaTeX-Format
+  type            = "latex",
+  style           = "ajps",
+  star.cutoffs    = c(0.05, 0.01, 0.001),
+  digits          = 3,
+  align           = TRUE,
+  intercept.bottom= FALSE,
+  no.space        = TRUE,
+  out             = "mod_med_overview.tex"
+)
+```
+
+```{r}
+# ================================================
+# Moderierte Mediation inkl. Baseline- und Vollmodelle
+# Mit Beispiel-Datensatz zum direkten Ausprobieren
+# ================================================
+
+# 0. Pakete installieren & laden (einmalig) -------------------------------
+# install.packages(c("dplyr", "stargazer"))
+library(dplyr)
+library(stargazer)
+library(tidyverse)
+
+# 1. Datensatz laden
+setwd("~/Projects/Master-Thesis-Spatial-Proximity-Venture-Capital")
+data <- read_csv("data/sets-for-r/regression_data.csv")
+
+```
+
+
+
+```{r}
+library(splines)
+library(stargazer)
+library(pscl)
+
+# Knotendefinition (Median deiner Funding‐Variable)
+kn <- median(data$total_seed_funding_m, na.rm=TRUE)
+
+# Liste aller Prädiktoren – hier mit einem Splines‐Term für total_seed_funding_m
+ivs <- c(
+  "seed_investors_all_same_country",sprintf("bs(total_seed_funding_m, knots = %f, degree = 2, intercept = FALSE)", kn),
+  "number_of_founders",
+  "age",
+  "headquarters_country", "hub_binary", "b2b_binary",
+  "energy", "materials", "industrials", "consumer_discretionary",
+  "consumer_staples", "health_care", "financials",
+  "information_technology", "communication_services",
+  "utilities", "real_estate", "other"
+)
+
+# Formel konstruieren und Modell schätzen
+dv <- "exit_binary"
+logit_formula <- reformulate(ivs, dv)
+model_logit   <- glm(logit_formula, data = data, family = binomial)
+
+# Pseudo-R²
+pr2 <- pR2(model_logit)["McFadden"]
+
+# Ausgabe mit stargazer
+stargazer(
+  model_logit,
+  type                   = "text",
+  title                  = "Logistische Regression mit Splines",
+  dep.var.labels.include = FALSE,
+  star.cutoffs           = c(0.05, 0.01, 0.001),
+  signif.stars           = TRUE,
+  report                 = "vc*p",
+  digits                 = 3,
+  omit.stat              = c("aic", "ll"),
+  add.lines              = list(
+    c("McFadden’s Pseudo-R²", formatC(pr2, digits = 3))
+  )
+)
+```
+
+```{r}
+library(splines)
+library(stargazer)
+
+# Knotendefinition (Median deiner Funding‐Variable)
+kn <- median(data$total_seed_funding_m, na.rm=TRUE)
+
+# 1) Liste aller Prädiktoren (ohne Splines, da wir hier eine lineare Regression wollen)
+ivs <- c(
+  "homecountry_pca_component", sprintf("bs(total_seed_funding_m, knots = %f, degree = 3, intercept = FALSE)", kn),
+  "number_of_founders", "number_seed_investors",
+  "age",
+  "headquarters_country", "hub_binary", "b2b_binary",
+  "energy", "materials", "industrials", "consumer_discretionary",
+  "consumer_staples", "health_care", "financials",
+  "information_technology", "communication_services",
+  "utilities", "real_estate", "other"
+)
+
+# 2) Abhängige Variable definieren
+dv <- "years_to_exit"
+
+# 3) Formel konstruieren und Modell schätzen
+lm_formula <- reformulate(ivs, dv)
+model_lm   <- lm(lm_formula, data = data)
+
+# 4) R² extrahieren
+R2 <- summary(model_lm)$r.squared
+
+# 5) Ausgabe mit stargazer
+stargazer(
+  model_lm,
+  type             = "text",
+  title            = "Lineare Regression",
+  dep.var.labels = "Years to Exit",
+  star.cutoffs   = c(0.05, 0.01, 0.001),
+  signif.stars   = TRUE,
+  report         = "vcsp",    # v=Koeff, c=SE, s=Sterne, p=p-Werte
+  digits         = 3,
+  omit.stat      = c("AIC", "BIC"),
+  add.lines      = list(
+    c("R-squared", formatC(R2, digits = 3))
+  )
+)
+```
+
+
+
+
+
+
