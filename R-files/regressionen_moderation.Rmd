@@ -1,0 +1,176 @@
+---
+title: "Follow_on"
+author: "Jan Linzner"
+date: "2025-06-24"
+output: html_document
+---
+
+```{r Load Packages and Data Sets}
+library(tidyverse)
+library(stargazer)
+library(pscl)
+
+setwd("~/Projects/Master-Thesis-Spatial-Proximity-Venture-Capital")
+data <- read_csv("data/sets-for-r/data_germany.csv")
+```
+
+
+
+```{r}
+ivs <- c(
+  "seed_investor_same_city", "follow_on_after_3_year", "number_of_founders", "age", "founded_year", "hub_binary", "b2b_binary", "number_seed_rounds", "number_seed_investors",
+  "accelerator_funding_binary", "angel_group_funding_binary", "micro_vc_funding_binary", "corporate_vc_funding_binary", "energy", "materials", "industrials", "consumer_discretionary",
+  "consumer_staples", "health_care", "financials",
+  "information_technology", "communication_services",
+  "utilities", "real_estate", "other"
+)
+
+dv <- "success"
+
+logit_formula <- reformulate(ivs, dv)
+
+model_logit <- glm(logit_formula,
+                   data   = data,
+                   family = binomial(link = "logit"))
+
+pr2 <- pR2(model_logit)["McFadden"]
+
+stargazer(
+  model_logit,
+  type                   = "text",
+  title                  = "Einfache logistische Regression",
+  dep.var.labels.include = FALSE,
+  star.cutoffs           = c(0.05, 0.01, 0.001),
+  signif.stars           = TRUE,
+  report                 = "vc*p",   # Koeff., SE und p-Werte
+  digits                 = 3,
+  omit.stat              = c("aic", "ll"),
+  add.lines              = list(
+    c("McFadden’s Pseudo-R²", formatC(pr2, digits = 3))
+  )
+)
+```
+
+
+```{r}
+ivs <- c(
+  "homecountry_investor_in_seed_binary", "number_of_founders", "age", "hub_binary", "b2b_binary",
+  "energy", "materials", "industrials", "consumer_discretionary",
+  "consumer_staples", "health_care", "financials",
+  "information_technology", "communication_services",
+  "utilities", "real_estate", "other"
+)
+
+dv <- "years_to_exit" 
+
+lm_formula <- reformulate(ivs, dv)
+
+model_lm <- lm(lm_formula, data = data)
+
+model_sum <- summary(model_lm)
+r2      <- model_sum$r.squared
+adj_r2  <- model_sum$adj.r.squared
+
+stargazer(
+  model_lm,
+  type                   = "text",
+  title                  = "Lineare Regression",
+  dep.var.labels.include = FALSE,
+  star.cutoffs           = c(0.05, 0.01, 0.001),
+  signif.stars           = TRUE,
+  report                 = "vc*p", 
+  digits                 = 3,
+  omit.stat              = c("f", "ser"),  
+  add.lines = list(
+    c("R-squared",        formatC(r2,     digits = 3)),
+    c("Adj. R-squared",   formatC(adj_r2, digits = 3))
+  )
+)
+```
+```{r}
+library(dplyr)
+library(stargazer)
+library(pscl)
+
+fit_models <- function(dat, center = FALSE) {
+  df <- dat
+  
+  # 1) Optional Moderator zentrieren
+  if (center) {
+    mu <- mean(df$degree_homecountry, na.rm = TRUE)
+    df <- df %>%
+      mutate(
+        mod_c    = degree_homecountry - mu,
+        home_int = seed_investor_same_city * mod_c
+      )
+    mod_name   <- "mod_c"
+    int_name   <- "home_int"
+  } else {
+    df <- df %>%
+      mutate(
+        mod_c    = target_vc_in_seed_binary,
+        home_int = seed_investor_same_city * target_vc_in_seed_binary
+      )
+    mod_name   <- "target_vc_in_seed_binary"
+    int_name   <- "home_int"
+  }
+  
+  # 2) Prädiktorenlisten bauen
+  ivs <- c(
+    "seed_investor_same_city", "number_of_founders", "age", "founded_year",
+    "hub_binary", "b2b_binary", "number_seed_rounds", "number_seed_investors",
+    "accelerator_funding_binary", "angel_group_funding_binary",
+    "micro_vc_funding_binary", "corporate_vc_funding_binary",
+    "energy", "materials", "industrials", "consumer_discretionary",
+    "consumer_staples", "health_care", "financials",
+    "information_technology", "communication_services",
+    "utilities", "real_estate", "other"
+  )
+  
+  # Basismodell
+  f1 <- reformulate(ivs, "success")
+  # mit Moderator
+  f2 <- reformulate(c(ivs, mod_name), "success")
+  # mit Interaction
+  f3 <- reformulate(c(ivs, mod_name, int_name), "success")
+  
+  # 3) Fitten
+  m1 <- glm(f1, data = df, family = binomial)
+  m2 <- glm(f2, data = df, family = binomial)
+  m3 <- glm(f3, data = df, family = binomial)
+  
+  # 4) Pseudo-R²
+  pr2 <- sapply(list(m1, m2, m3), function(m) pR2(m)["McFadden"])
+  
+  # 5) Ausgabe
+  stargazer(
+    m1, m2, m3,
+    type            = "text",
+    title           = paste0(
+      "Moderationsanalyse (Logit) — ",
+      if (center) "Moderator zentriert" else "Original-Moderator"
+    ),
+    dep.var.labels.include = FALSE,
+    column.labels   = c("Baseline", "Mit Moderator", "Mit Interaktion"),
+    omit.stat       = c("aic", "ll"),
+    star.cutoffs    = c(0.05, 0.01, 0.001),
+    signif.stars    = TRUE,
+    report          = "vc*p",
+    digits          = 3,
+    add.lines       = list(
+      c("McFadden’s Pseudo-R² (Mod1)", formatC(pr2[1], digits = 3)),
+      c("McFadden’s Pseudo-R² (Mod2)", formatC(pr2[2], digits = 3)),
+      c("McFadden’s Pseudo-R² (Mod3)", formatC(pr2[3], digits = 3))
+    )
+  )
+}
+
+# Anwendung:
+# Ohne Zentrierung
+fit_models(data, center = FALSE)
+
+# Mit Mittelwert-Zentrierung
+fit_models(data, center = TRUE)
+```
+
+

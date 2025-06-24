@@ -147,7 +147,7 @@ kn <- median(data$total_seed_funding_m, na.rm=TRUE)
 
 # Liste aller Prädiktoren – hier mit einem Splines‐Term für total_seed_funding_m
 ivs <- c(
-  "seed_investors_all_same_country",sprintf("bs(total_seed_funding_m, knots = %f, degree = 2, intercept = FALSE)", kn),
+  "homecountry_pca_component",sprintf("bs(total_seed_funding_m, knots = %f, degree = 2, intercept = FALSE)", kn),
   "number_of_founders",
   "age",
   "headquarters_country", "hub_binary", "b2b_binary",
