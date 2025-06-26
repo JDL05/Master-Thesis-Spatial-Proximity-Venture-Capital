@@ -11,21 +11,54 @@ library(stargazer)
 library(pscl)
 
 setwd("~/Projects/Master-Thesis-Spatial-Proximity-Venture-Capital")
-data <- read_csv("data/sets-for-r/data_germany.csv")
+data <- read_csv("data/sets-for-r/regression_sets/df_europe.csv")
 ```
+
+```{r}
+data
+```
+```{r}
+# adds a new column with the standardized values
+data$share_successful_startups_in_environment <- scale(
+  data$share_successful_startups_in_environment,
+  center = TRUE,    # subtract the mean
+  scale  = TRUE     # divide by the standard deviation
+)
+
+# adds a new column with the standardized values
+data$founded_startups_in_environment <- scale(
+  data$founded_startups_in_environment,
+  center = TRUE,    # subtract the mean
+  scale  = TRUE     # divide by the standard deviation
+)
+
+# adds a new column with the standardized values
+data$min_seed_investor_pairwise_distance <- scale(
+  data$min_seed_investor_pairwise_distance,
+  center = TRUE,    # subtract the mean
+  scale  = TRUE     # divide by the standard deviation
+)
+
+
+
+```
+
+
+
 
 
 
 ```{r}
 ivs <- c(
-  "seed_investor_same_city", "follow_on_after_3_year", "number_of_founders", "age", "founded_year", "hub_binary", "b2b_binary", "number_seed_rounds", "number_seed_investors",
-  "accelerator_funding_binary", "angel_group_funding_binary", "micro_vc_funding_binary", "corporate_vc_funding_binary", "energy", "materials", "industrials", "consumer_discretionary",
-  "consumer_staples", "health_care", "financials",
-  "information_technology", "communication_services",
-  "utilities", "real_estate", "other"
+    "all_homecountry_investors_in_seed_binary", "seed_investor_same_city_30",
+    "latitude", "longitude", "founded_year", "number_of_founders", "year_first_round", "headquarters_country",
+    "b2b_binary",  "hub_binary", "age", "number_seed_rounds", "number_seed_investors", "avg_age_of_seed_investors", "specific_vc_in_seed_binary", "energy", "materials", "industrials", "consumer_discretionary", 
+  "consumer_staples", "health_care", "financials", "information_technology", "communication_services", 
+  "utilities", "real_estate", "other", "accelerator_funding_binary", 
+    "angel_group_funding_binary", "micro_vc_funding_binary", "corporate_vc_funding_binary", "specific_vc_in_seed_binary"
 )
 
-dv <- "success"
+dv <- "exit_round_success"
 
 logit_formula <- reformulate(ivs, dv)
 
@@ -53,41 +86,6 @@ stargazer(
 
 
 ```{r}
-ivs <- c(
-  "homecountry_investor_in_seed_binary", "number_of_founders", "age", "hub_binary", "b2b_binary",
-  "energy", "materials", "industrials", "consumer_discretionary",
-  "consumer_staples", "health_care", "financials",
-  "information_technology", "communication_services",
-  "utilities", "real_estate", "other"
-)
-
-dv <- "years_to_exit" 
-
-lm_formula <- reformulate(ivs, dv)
-
-model_lm <- lm(lm_formula, data = data)
-
-model_sum <- summary(model_lm)
-r2      <- model_sum$r.squared
-adj_r2  <- model_sum$adj.r.squared
-
-stargazer(
-  model_lm,
-  type                   = "text",
-  title                  = "Lineare Regression",
-  dep.var.labels.include = FALSE,
-  star.cutoffs           = c(0.05, 0.01, 0.001),
-  signif.stars           = TRUE,
-  report                 = "vc*p", 
-  digits                 = 3,
-  omit.stat              = c("f", "ser"),  
-  add.lines = list(
-    c("R-squared",        formatC(r2,     digits = 3)),
-    c("Adj. R-squared",   formatC(adj_r2, digits = 3))
-  )
-)
-```
-```{r}
 library(dplyr)
 library(stargazer)
 library(pscl)
@@ -97,10 +95,10 @@ fit_models <- function(dat, center = FALSE) {
   
   # 1) Optional Moderator zentrieren
   if (center) {
-    mu <- mean(df$degree_homecountry, na.rm = TRUE)
+    mu <- mean(df$homecountry_pca_component, na.rm = TRUE)
     df <- df %>%
       mutate(
-        mod_c    = degree_homecountry - mu,
+        mod_c    = homecountry_pca_component - mu,
         home_int = seed_investor_same_city * mod_c
       )
     mod_name   <- "mod_c"
@@ -108,31 +106,30 @@ fit_models <- function(dat, center = FALSE) {
   } else {
     df <- df %>%
       mutate(
-        mod_c    = target_vc_in_seed_binary,
-        home_int = seed_investor_same_city * target_vc_in_seed_binary
+        mod_c    = seed_investor_same_city_30,
+        hub_binaryxseed_investor_same_city_30 = hub_binary * seed_investor_same_city_30
+
       )
-    mod_name   <- "target_vc_in_seed_binary"
-    int_name   <- "home_int"
+    mod_name   <- "seed_investor_same_city_30"
+    int_name   <- "hub_binaryxseed_investor_same_city_30"
   }
   
   # 2) Prädiktorenlisten bauen
   ivs <- c(
-    "seed_investor_same_city", "number_of_founders", "age", "founded_year",
-    "hub_binary", "b2b_binary", "number_seed_rounds", "number_seed_investors",
-    "accelerator_funding_binary", "angel_group_funding_binary",
-    "micro_vc_funding_binary", "corporate_vc_funding_binary",
-    "energy", "materials", "industrials", "consumer_discretionary",
-    "consumer_staples", "health_care", "financials",
-    "information_technology", "communication_services",
-    "utilities", "real_estate", "other"
+     "hub_binary",
+      "latitude", "longitude", "founded_year", "number_of_founders", "year_first_round", "headquarters_country",
+      "b2b_binary", "age", "number_seed_rounds", "number_seed_investors", "avg_age_of_seed_investors", "specific_vc_in_seed_binary", "energy", "materials", "industrials", "consumer_discretionary", 
+    "consumer_staples", "health_care", "financials", "information_technology", "communication_services", 
+    "utilities", "real_estate", "other", "accelerator_funding_binary", 
+      "angel_group_funding_binary", "micro_vc_funding_binary", "corporate_vc_funding_binary", "specific_vc_in_seed_binary"
   )
-  
+    
   # Basismodell
-  f1 <- reformulate(ivs, "success")
+  f1 <- reformulate(ivs, "exit_round_success")
   # mit Moderator
-  f2 <- reformulate(c(ivs, mod_name), "success")
+  f2 <- reformulate(c(ivs, mod_name), "exit_round_success")
   # mit Interaction
-  f3 <- reformulate(c(ivs, mod_name, int_name), "success")
+  f3 <- reformulate(c(ivs, mod_name, int_name), "exit_round_success")
   
   # 3) Fitten
   m1 <- glm(f1, data = df, family = binomial)
@@ -173,4 +170,84 @@ fit_models(data, center = FALSE)
 fit_models(data, center = TRUE)
 ```
 
+```{r}
+library(dplyr)
+library(stargazer)
+library(pscl)
+
+fit_models <- function(dat, center = FALSE) {
+  df <- dat
+  
+  # 1) Optional Moderator zentrieren
+  if (center) {
+    mu <- mean(df$homecountry_pca_component, na.rm = TRUE)
+    df <- df %>%
+      mutate(
+        mod_c    = homecountry_pca_component - mu,
+        home_int = seed_investor_same_city * mod_c
+      )
+    mod_name   <- "mod_c"
+    int_name   <- "home_int"
+  } else {
+    df <- df %>%
+      mutate(
+        mod_c    = seed_investor_same_city_30,
+       log_share_successful_startups_in_environmentxseed_investor_same_city_30 = log_share_successful_startups_in_environment * seed_investor_same_city_30
+
+      )
+    mod_name   <- "seed_investor_same_city_30"
+    int_name   <- "log_share_successful_startups_in_environmentxseed_investor_same_city_30"
+  }
+  
+  # 2) Prädiktorenlisten bauen
+  ivs <- c(
+     "log_share_successful_startups_in_environment", "latitude", "longitude", "founded_year", "number_of_founders", "year_first_round", "headquarters_country", "b2b_binary", "age", "number_seed_rounds", "number_seed_investors", "avg_age_of_seed_investors", "specific_vc_in_seed_binary", "energy", "materials", "industrials", "consumer_discretionary", "consumer_staples", "health_care", "financials", "information_technology", "communication_services", "utilities", "real_estate", "other", "accelerator_funding_binary", 
+      "angel_group_funding_binary", "micro_vc_funding_binary", "corporate_vc_funding_binary", "specific_vc_in_seed_binary"
+  )
+    
+  # Basismodell
+  f1 <- reformulate(ivs, "exit_round_success")
+  # mit Moderator
+  f2 <- reformulate(c(ivs, mod_name), "exit_round_success")
+  # mit Interaction
+  f3 <- reformulate(c(ivs, mod_name, int_name), "exit_round_success")
+  
+  # 3) Fitten
+  m1 <- glm(f1, data = df, family = binomial)
+  m2 <- glm(f2, data = df, family = binomial)
+  m3 <- glm(f3, data = df, family = binomial)
+  
+  # 4) Pseudo-R²
+  pr2 <- sapply(list(m1, m2, m3), function(m) pR2(m)["McFadden"])
+  
+  # 5) Ausgabe
+  stargazer(
+    m1, m2, m3,
+    type            = "text",
+    title           = paste0(
+      "Moderationsanalyse (Logit) — ",
+      if (center) "Moderator zentriert" else "Original-Moderator"
+    ),
+    dep.var.labels.include = FALSE,
+    column.labels   = c("Baseline", "Mit Moderator", "Mit Interaktion"),
+    omit.stat       = c("aic", "ll"),
+    star.cutoffs    = c(0.05, 0.01, 0.001),
+    signif.stars    = TRUE,
+    report          = "vc*p",
+    digits          = 3,
+    add.lines       = list(
+      c("McFadden’s Pseudo-R² (Mod1)", formatC(pr2[1], digits = 3)),
+      c("McFadden’s Pseudo-R² (Mod2)", formatC(pr2[2], digits = 3)),
+      c("McFadden’s Pseudo-R² (Mod3)", formatC(pr2[3], digits = 3))
+    )
+  )
+}
+
+# Anwendung:
+# Ohne Zentrierung
+fit_models(data, center = FALSE)
+
+# Mit Mittelwert-Zentrierung
+fit_models(data, center = TRUE)
+```
 
