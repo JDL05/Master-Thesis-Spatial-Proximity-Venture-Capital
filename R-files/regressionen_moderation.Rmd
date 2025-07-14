@@ -50,13 +50,13 @@ data$min_seed_investor_pairwise_distance <- scale(
 
 ```{r}
 ivs <- c(
-    "seed_investor_same_city_30", "all_homecountry_investors_in_seed_binary", 
-    "number_lead_seed_investors", "headquarters_country",
+    "seed_investor_same_city_100", "all_homecountry_investors_in_seed_binary", 
+    "number_lead_seed_investors", "headquarters_country", "avg_exits_of_seed_investors",
     "latitude", "longitude", "founded_year", "number_of_founders", "year_first_round", 
-   "age", "number_seed_rounds", "number_seed_investors", "avg_age_of_seed_investors", "hub_binary", "specific_vc_in_seed_binary", "energy", "materials", "industrials", "consumer_discretionary", 
+   "age", "number_seed_rounds", "number_seed_investors", "avg_age_of_seed_investors", "hub_binary", "b2b_binary", "specific_vc_in_seed_binary", "energy", "materials", "industrials", "consumer_discretionary", 
   "consumer_staples", "health_care", "financials", "information_technology", "communication_services", 
   "utilities", "real_estate", "other", "accelerator_funding_binary", 
-    "angel_group_funding_binary", "micro_vc_funding_binary", "corporate_vc_funding_binary", "top_university_ecosystem_binary", "gdp_growth_founding_year"
+    "angel_group_funding_binary", "micro_vc_funding_binary", "corporate_vc_funding_binary", "top_university_ecosystem_binary", "gdp_growth_founding_year", "us_investor", "european_investor", "log_share_successful_startups_in_environment", "in_coinv_peer_top20_30km"
 )
 
 dv <- "exit_round_success"
