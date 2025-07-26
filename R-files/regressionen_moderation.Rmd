@@ -50,13 +50,11 @@ data$min_seed_investor_pairwise_distance <- scale(
 
 ```{r}
 ivs <- c(
-    "seed_investor_same_city_100", "all_homecountry_investors_in_seed_binary", 
-    "number_lead_seed_investors", "headquarters_country", "avg_exits_of_seed_investors",
-    "latitude", "longitude", "founded_year", "number_of_founders", "year_first_round", 
-   "age", "number_seed_rounds", "number_seed_investors", "avg_age_of_seed_investors", "hub_binary", "b2b_binary", "specific_vc_in_seed_binary", "energy", "materials", "industrials", "consumer_discretionary", 
+    "seed_investor_same_city_30", "all_homecountry_investors_in_seed_binary", 
+     "headquarters_country", "latitude", "longitude", "founded_year", "number_of_founders",
+   "age", "hub_binary", "b2b_binary", "energy", "materials", "industrials", "consumer_discretionary", 
   "consumer_staples", "health_care", "financials", "information_technology", "communication_services", 
-  "utilities", "real_estate", "other", "accelerator_funding_binary", 
-    "angel_group_funding_binary", "micro_vc_funding_binary", "corporate_vc_funding_binary", "top_university_ecosystem_binary", "gdp_growth_founding_year", "us_investor", "european_investor", "log_share_successful_startups_in_environment", "in_coinv_peer_top20_30km"
+  "utilities", "real_estate", "other", "number_seed_rounds", "follow_on_investor_in_seed_binary", "year_first_round", "lead_investor_in_seed", "single_lead_investor", "avg_age_of_seed_investors",  "accelerator_funding_binary", "angel_group_funding_binary", "angel_investor_in_seed_binary", "corporate_vc_funding_binary",  "european_investor", "micro_vc_funding_binary", "specific_vc_in_seed_binary", "us_investor",  "one_seed_investor_binary", "mixed_syndicate", "low_seed_financing_binary",  "top_university_ecosystem_binary", "gdp_growth_founding_year"
 )
 
 dv <- "exit_round_success"
@@ -106,30 +104,28 @@ fit_models <- function(dat, center = FALSE) {
   } else {
     df <- df %>%
       mutate(
-        mod_c    = seed_investor_same_city_50,
-      hub_vc_in_seed_binaryxseed_investor_same_city50 = seed_investor_same_city_50 * hub_vc_in_seed_binary
+        mod_c    = seed_investor_same_city_30,
+      hub_binaryxseed_investor_same_city_30 = hub_binary * seed_investor_same_city_30
 
       )
-    mod_name   <- "seed_investor_same_city_50"
-    int_name   <- "hub_vc_in_seed_binaryxseed_investor_same_city50"
+    mod_name   <- "seed_investor_same_city_30"
+    int_name   <- "hub_binaryxseed_investor_same_city_30"
   }
   
   # 2) Prädiktorenlisten bauen
-  ivs <- c(
-  "hub_vc_in_seed_binary", "all_homecountry_investors_in_seed_binary", "in_coinv_peer_top20_30km", "number_lead_seed_investors", "headquarters_country",
-    "latitude", "longitude", "founded_year", "number_of_founders", "year_first_round", 
-   "age", "number_seed_rounds", "number_seed_investors", "avg_age_of_seed_investors", "hub_binary", "specific_vc_in_seed_binary", "energy", "materials", "industrials", "consumer_discretionary", 
+  ivs <- c("all_homecountry_investors_in_seed_binary", 
+     "headquarters_country", "latitude", "longitude", "founded_year", "number_of_founders",
+   "age", "hub_binary", "b2b_binary", "energy", "materials", "industrials", "consumer_discretionary", 
   "consumer_staples", "health_care", "financials", "information_technology", "communication_services", 
-  "utilities", "real_estate", "other", "accelerator_funding_binary", 
-    "angel_group_funding_binary", "micro_vc_funding_binary", "corporate_vc_funding_binary", "top_university_ecosystem_binary", "gdp_growth_founding_year"
+  "utilities", "real_estate", "other", "number_seed_rounds", "number_seed_investors", "follow_on_investor_in_seed_binary",  "one_seed_investor_binary", "single_lead_investor", "lead_investor_in_seed", "low_seed_financing_binary", "year_first_round", "avg_age_of_seed_investors",  "accelerator_funding_binary", "angel_group_funding_binary", "angel_investor_in_seed_binary", "corporate_vc_funding_binary",  "european_investor", "micro_vc_funding_binary", "specific_vc_in_seed_binary", "us_investor", "european_investor", "low_seed_financing_binary",  "top_university_ecosystem_binary", "gdp_growth_founding_year"
   )
     
   # Basismodell
-  f1 <- reformulate(ivs, "post_seed_funding")
+  f1 <- reformulate(ivs, "exit_round_success")
   # mit Moderator
-  f2 <- reformulate(c(ivs, mod_name), "post_seed_funding")
+  f2 <- reformulate(c(ivs, mod_name), "exit_round_success")
   # mit Interaction
-  f3 <- reformulate(c(ivs, mod_name, int_name), "post_seed_funding")
+  f3 <- reformulate(c(ivs, mod_name, int_name), "exit_round_success")
   
   # 3) Fitten
   m1 <- glm(f1, data = df, family = binomial)
